@@ -1,0 +1,19 @@
+pre_bump_hooks = [
+    "cargo check",
+]
+
+tag_prefix = "v"
+
+[commit_types]
+tests = { changelog_title = "Tests" }
+
+[changelog]
+path        = "CHANGELOG.md"
+template    = "remote"
+remote      = "github.com"
+owner       = "WalletConnect"
+repository  = "WalletConnectRust"
+
+authors = [
+    { signature = "Ivan Reshetnikov", username = "heilhead" }
+]

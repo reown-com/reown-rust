@@ -1,0 +1,34 @@
+# Root Crate
+[package]
+name = "walletconnect_sdk"
+version = "0.1.0"
+edition = "2021"
+authors = ["WalletConnect Team"]
+license = "Apache-2.0"
+
+[workspace]
+members = [
+    "relay_client",
+    "relay_rpc"
+]
+
+[features]
+full = [
+    "client",
+    "rpc",
+]
+client = ["dep:relay_client"]
+rpc = ["dep:relay_rpc"]
+
+[dependencies]
+relay_client = { path = "./relay_client", optional = true }
+relay_rpc = { path = "./relay_rpc", optional = true }
+
+[dev-dependencies]
+anyhow = "1"
+structopt = { version = "0.3", default-features = false }
+tokio = { version = "1.22", features = ["full"] }
+
+[[example]]
+name = "basic_client"
+required-features = ["full"]

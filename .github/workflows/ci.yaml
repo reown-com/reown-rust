@@ -1,0 +1,73 @@
+name: ci
+
+on:
+  pull_request:
+    paths-ignore:
+      - ".github/**"
+      - "docs/**"
+      - "README.md"
+
+  push:
+    branches: ["main"]
+    paths-ignore:
+      - ".github/**"
+      - "docs/**"
+      - "README.md"
+
+concurrency:
+  # Support push/pr as event types with different behaviors each:
+  # 1. push: queue up builds
+  # 2. pr: only allow one run per PR
+  group: ${{ github.workflow }}-${{ github.event_name }}${{ github.event.pull_request.number }}
+  # If there is already a workflow running for the same pull request, cancel it
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  tasks:
+    name: "${{ matrix.cargo.name }}"
+    runs-on:
+      group: ubuntu-runners
+    strategy:
+      fail-fast: false
+      matrix:
+        cargo:
+          - name: "Clippy"
+            cmd: clippy
+            args: --workspace --all-features --tests -- -D clippy::all -W clippy::style
+            rust: stable
+          - name: "Formatting"
+            cmd: fmt
+            args: --all -- --check
+            rust: nightly
+          - name: "Tests"
+            cmd: nextest
+            args: run --workspace --retries 3
+            rust: stable
+          - name: "Documentation Tests"
+            cmd: test
+            args: --workspace --doc
+            rust: stable
+    env:
+      RUST_BACKTRACE: full
+    steps:
+      - uses: actions/checkout@v3
+
+      # Install Rust toolchain
+      - name: "Install Rust ${{ matrix.cargo.rust }}"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.cargo.rust }}
+          profile: default
+          override: true
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: taiki-e/install-action@v1
+        with:
+          tool: nextest
+
+      - name: "Cargo ${{ matrix.cargo.name }}"
+        uses: actions-rs/cargo@v1
+        with:
+          command: ${{ matrix.cargo.cmd }}
+          args: ${{ matrix.cargo.args }}
