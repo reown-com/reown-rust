@@ -1,0 +1,2 @@
+# WalletConnectRust
+WalletConnect Rust Client
