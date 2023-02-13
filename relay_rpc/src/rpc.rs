@@ -443,6 +443,7 @@ impl Publish {
         &self,
         message_id: MessageId,
         subscription_id: SubscriptionId,
+        published_at: i64,
     ) -> Request {
         Request {
             id: message_id,
@@ -452,6 +453,7 @@ impl Publish {
                 data: SubscriptionData {
                     topic: self.topic.clone(),
                     message: self.message.clone(),
+                    published_at,
                 },
             }),
         }
@@ -542,12 +544,16 @@ impl RequestPayload for Subscription {
 
 /// Data structure representing subscription message params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SubscriptionData {
     /// The topic of the subscription.
     pub topic: Topic,
 
     /// The message for the subscription.
     pub message: Arc<str>,
+
+    /// Message publish timestamp in UTC milliseconds.
+    pub published_at: i64,
 }
 
 /// Enum representing parameters of all possible RPC requests.

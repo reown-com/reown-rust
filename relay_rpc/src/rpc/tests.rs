@@ -91,6 +91,7 @@ fn subscription() {
     let data = SubscriptionData {
         topic: "test_topic".into(),
         message: "test_message".into(),
+        published_at: 123,
     };
     let params = Subscription {
         id: "test_id".into(),
@@ -102,7 +103,7 @@ fn subscription() {
 
     assert_eq!(
         &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"irn_subscription","params":{"id":"test_id","data":{"topic":"test_topic","message":"test_message"}}}"#
+        r#"{"id":1,"jsonrpc":"2.0","method":"irn_subscription","params":{"id":"test_id","data":{"topic":"test_topic","message":"test_message","publishedAt":123}}}"#
     );
 
     let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
@@ -112,7 +113,7 @@ fn subscription() {
 
 #[test]
 fn deserialize_iridium_method() {
-    let serialized = r#"{"id":1,"jsonrpc":"2.0","method":"iridium_subscription","params":{"id":"test_id","data":{"topic":"test_topic","message":"test_message"}}}"#;
+    let serialized = r#"{"id":1,"jsonrpc":"2.0","method":"iridium_subscription","params":{"id":"test_id","data":{"topic":"test_topic","message":"test_message","publishedAt":123}}}"#;
     assert!(serde_json::from_str::<'_, Payload>(serialized).is_ok());
 }
 
@@ -315,6 +316,7 @@ fn validation() {
             data: SubscriptionData {
                 topic: topic.clone(),
                 message: message.clone(),
+                published_at: 123,
             },
         }),
     };
@@ -329,6 +331,7 @@ fn validation() {
             data: SubscriptionData {
                 topic: topic.clone(),
                 message: message.clone(),
+                published_at: 123,
             },
         }),
     };
@@ -348,6 +351,7 @@ fn validation() {
             data: SubscriptionData {
                 topic: Topic::from("invalid"),
                 message,
+                published_at: 123,
             },
         }),
     };
@@ -365,6 +369,7 @@ fn validation() {
             data: SubscriptionData {
                 topic: topic.clone(),
                 message: "0".repeat(MAX_MESSAGE_LENGTH + 1).into(),
+                published_at: 123,
             },
         }),
     };
