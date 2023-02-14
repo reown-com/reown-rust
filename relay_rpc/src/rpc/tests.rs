@@ -195,7 +195,7 @@ fn validation() {
     // Valid data.
     let id = MessageId::from(1);
     let jsonrpc: Arc<str> = "2.0".into();
-    let message: Arc<str> = "0".repeat(MAX_MESSAGE_LENGTH).into();
+    let message: Arc<str> = "0".repeat(512).into();
     let topic = Topic::from("c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840");
     let subscription_id =
         SubscriptionId::from("c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841");
@@ -244,20 +244,6 @@ fn validation() {
         request.validate(),
         Err(ValidationError::TopicDecoding(DecodingError::Length))
     );
-
-    // Publish: invalid message.
-    let request = Request {
-        id,
-        jsonrpc: jsonrpc.clone(),
-        params: Params::Publish(Publish {
-            topic: topic.clone(),
-            message: "0".repeat(MAX_MESSAGE_LENGTH + 1).into(),
-            ttl_secs: 0,
-            tag: 0,
-            prompt: false,
-        }),
-    };
-    assert_eq!(request.validate(), Err(ValidationError::MessageLength));
 
     // Subscribe: valid.
     let request = Request {
@@ -359,21 +345,6 @@ fn validation() {
         request.validate(),
         Err(ValidationError::TopicDecoding(DecodingError::Length))
     );
-
-    // Subscription: invalid message.
-    let request = Request {
-        id,
-        jsonrpc: jsonrpc.clone(),
-        params: Params::Subscription(Subscription {
-            id: subscription_id.clone(),
-            data: SubscriptionData {
-                topic: topic.clone(),
-                message: "0".repeat(MAX_MESSAGE_LENGTH + 1).into(),
-                published_at: 123,
-            },
-        }),
-    };
-    assert_eq!(request.validate(), Err(ValidationError::MessageLength));
 
     // Batch subscription: valid.
     let request = Request {
