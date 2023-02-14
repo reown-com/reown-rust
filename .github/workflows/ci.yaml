@@ -7,13 +7,6 @@ on:
       - "docs/**"
       - "README.md"
 
-  push:
-    branches: ["main"]
-    paths-ignore:
-      - ".github/**"
-      - "docs/**"
-      - "README.md"
-
   workflow_dispatch:
 
 concurrency:
@@ -73,3 +66,15 @@ jobs:
         with:
           command: ${{ matrix.cargo.cmd }}
           args: ${{ matrix.cargo.args }}
+
+  misspell:
+    name: Spellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: misspell
+        uses: reviewdog/action-misspell@v1
+        with:
+          github_token: ${{ secrets.github_token }}
+          locale: "US"
