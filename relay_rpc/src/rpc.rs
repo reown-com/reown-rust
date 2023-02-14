@@ -16,11 +16,6 @@ pub const JSON_RPC_VERSION_STR: &str = "2.0";
 pub static JSON_RPC_VERSION: once_cell::sync::Lazy<Arc<str>> =
     once_cell::sync::Lazy::new(|| Arc::from(JSON_RPC_VERSION_STR));
 
-/// The maximum message length in bytes.
-///
-/// See <https://github.com/WalletConnect/walletconnect-docs/blob/main/docs/specs/servers/relay/relay-server-rpc.md>
-pub const MAX_MESSAGE_LENGTH: usize = 20000;
-
 /// The maximum number of topics allowed for a batch subscribe request.
 ///
 /// See <https://github.com/WalletConnect/walletconnect-docs/blob/main/docs/specs/servers/relay/relay-server-rpc.md>
@@ -39,12 +34,6 @@ pub enum ValidationError {
 
     #[error("Invalid JSON RPC version")]
     JsonRpcVersion,
-
-    #[error(
-        "Message is too long. Maximum message length is {} characters",
-        MAX_MESSAGE_LENGTH
-    )]
-    MessageLength,
 
     #[error(
         "The batch contains too many items. Maximum number of subscriptions is {}",
@@ -258,16 +247,7 @@ impl ErrorResponse {
     /// Validates the parameters.
     pub fn validate(&self) -> Result<(), ValidationError> {
         if self.jsonrpc.as_ref() != JSON_RPC_VERSION_STR {
-            return Err(ValidationError::JsonRpcVersion);
-        }
-
-        let data_len = self.error.data.as_deref().map(str::len).unwrap_or(0);
-        let total_len = data_len + self.error.message.len();
-
-        // Make sure the combined length of error message and the optional `data` param
-        // do not exceed the `MAX_MESSAGE_LENGTH` limit.
-        if total_len > MAX_MESSAGE_LENGTH {
-            Err(ValidationError::MessageLength)
+            Err(ValidationError::JsonRpcVersion)
         } else {
             Ok(())
         }
@@ -487,11 +467,7 @@ impl RequestPayload for Publish {
             .decode()
             .map_err(ValidationError::TopicDecoding)?;
 
-        if self.message.len() > MAX_MESSAGE_LENGTH {
-            Err(ValidationError::MessageLength)
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 
     fn into_params(self) -> Params {
@@ -530,11 +506,7 @@ impl RequestPayload for Subscription {
             .decode()
             .map_err(ValidationError::TopicDecoding)?;
 
-        if self.data.message.len() > MAX_MESSAGE_LENGTH {
-            Err(ValidationError::MessageLength)
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 
     fn into_params(self) -> Params {
