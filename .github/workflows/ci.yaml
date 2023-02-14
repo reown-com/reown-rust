@@ -7,13 +7,6 @@ on:
       - "docs/**"
       - "README.md"
 
-  push:
-    branches: ["main"]
-    paths-ignore:
-      - ".github/**"
-      - "docs/**"
-      - "README.md"
-
   workflow_dispatch:
 
 concurrency:
