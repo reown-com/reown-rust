@@ -68,7 +68,7 @@ jobs:
           args: ${{ matrix.cargo.args }}
 
   misspell:
-    name: spellcheck
+    name: Spellcheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
