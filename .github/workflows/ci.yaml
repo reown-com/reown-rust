@@ -1,13 +1,13 @@
 name: ci
 
 on:
+  workflow_call:
+  workflow_dispatch:
   pull_request:
     paths-ignore:
       - ".github/**"
       - "docs/**"
       - "README.md"
-
-  workflow_dispatch:
 
 concurrency:
   # Support push/pr as event types with different behaviors each:
