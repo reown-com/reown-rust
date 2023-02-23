@@ -20,6 +20,7 @@ mod outbound;
 mod stream;
 
 /// The message received from a subscription.
+#[derive(Debug)]
 pub struct PublishedMessage {
     pub topic: Topic,
     pub message: Arc<str>,
