@@ -50,6 +50,9 @@ pub enum ValidationError {
 /// make sense of the problem.
 #[derive(Debug, thiserror::Error)]
 pub enum GenericError {
+    #[error("Authorization error: {0}")]
+    Authorization(BoxError),
+
     /// Request parameters validation failed.
     #[error("Request validation error: {0}")]
     Validation(#[from] ValidationError),
@@ -74,11 +77,12 @@ pub enum GenericError {
 }
 
 impl GenericError {
-    /// The error code. These are mostly generic and carried over from the old
-    /// `ts-relay`.
+    /// The error code. These are the standard JSONRPC error codes. The Relay
+    /// specific errors are in 3000-4999 range to align with the websocket close
+    /// codes.
     pub fn code(&self) -> i32 {
-        // Source: https://github.com/WalletConnect/rs-relay/issues/262
         match self {
+            Self::Authorization(_) => 3000,
             Self::Serialization(_) => -32700,
             Self::Validation(_) => -32602,
             Self::RequestMethod => -32601,
