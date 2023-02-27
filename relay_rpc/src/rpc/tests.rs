@@ -92,6 +92,7 @@ fn subscription() {
         topic: "test_topic".into(),
         message: "test_message".into(),
         published_at: 123,
+        tag: 1000,
     };
     let params = Subscription {
         id: "test_id".into(),
@@ -103,7 +104,7 @@ fn subscription() {
 
     assert_eq!(
         &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"irn_subscription","params":{"id":"test_id","data":{"topic":"test_topic","message":"test_message","publishedAt":123}}}"#
+        r#"{"id":1,"jsonrpc":"2.0","method":"irn_subscription","params":{"id":"test_id","data":{"topic":"test_topic","message":"test_message","publishedAt":123,"tag":1000}}}"#
     );
 
     let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
@@ -113,7 +114,7 @@ fn subscription() {
 
 #[test]
 fn deserialize_iridium_method() {
-    let serialized = r#"{"id":1,"jsonrpc":"2.0","method":"iridium_subscription","params":{"id":"test_id","data":{"topic":"test_topic","message":"test_message","publishedAt":123}}}"#;
+    let serialized = r#"{"id":1,"jsonrpc":"2.0","method":"iridium_subscription","params":{"id":"test_id","data":{"topic":"test_topic","message":"test_message","publishedAt":123,"tag":1000}}}"#;
     assert!(serde_json::from_str::<'_, Payload>(serialized).is_ok());
 }
 
@@ -303,6 +304,7 @@ fn validation() {
                 topic: topic.clone(),
                 message: message.clone(),
                 published_at: 123,
+                tag: 1000,
             },
         }),
     };
@@ -318,6 +320,7 @@ fn validation() {
                 topic: topic.clone(),
                 message: message.clone(),
                 published_at: 123,
+                tag: 1000,
             },
         }),
     };
@@ -338,6 +341,7 @@ fn validation() {
                 topic: Topic::from("invalid"),
                 message,
                 published_at: 123,
+                tag: 1000,
             },
         }),
     };
