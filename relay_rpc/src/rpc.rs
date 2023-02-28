@@ -438,6 +438,7 @@ impl Publish {
                     topic: self.topic.clone(),
                     message: self.message.clone(),
                     published_at,
+                    tag: self.tag,
                 },
             }),
         }
@@ -530,6 +531,10 @@ pub struct SubscriptionData {
 
     /// Message publish timestamp in UTC milliseconds.
     pub published_at: i64,
+
+    /// A label that identifies what type of message is sent based on the RPC
+    /// method used.
+    pub tag: u32,
 }
 
 /// Enum representing parameters of all possible RPC requests.
