@@ -32,7 +32,7 @@ use {
 
 pub type SocketStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
-/// Opens a cnnection to the Relay and returns [`ClientStream`] for the
+/// Opens a connection to the Relay and returns [`ClientStream`] for the
 /// connection.
 pub async fn create_stream(opts: ConnectionOptions) -> Result<ClientStream, Error> {
     let (socket, _) = connect_async(opts.into_request()?)
