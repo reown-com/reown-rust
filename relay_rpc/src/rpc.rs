@@ -534,6 +534,7 @@ pub struct SubscriptionData {
 
     /// A label that identifies what type of message is sent based on the RPC
     /// method used.
+    #[serde(default, skip_serializing_if = "is_default")]
     pub tag: u32,
 }
 
