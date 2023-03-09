@@ -104,7 +104,7 @@ impl<'a> JwtHeader<'a> {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct JwtClaims<'a> {
     pub iss: &'a str,
     pub sub: &'a str,
