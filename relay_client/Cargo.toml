@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+async-trait = "0.1"
 relay_rpc = { path = "../relay_rpc" }
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 thiserror = "1.0"

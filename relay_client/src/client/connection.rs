@@ -49,7 +49,7 @@ pub(super) async fn connection_event_loop<T>(
                             let result = conn.connect(*opts).await;
 
                             if result.is_ok() {
-                                handler.connected();
+                                handler.connected().await;
                             }
 
                             tx.send(result).ok();
@@ -67,7 +67,7 @@ pub(super) async fn connection_event_loop<T>(
                     // Control TX has been dropped, shutting down.
                     None => {
                         conn.disconnect().await.ok();
-                        handler.disconnected(None);
+                        handler.disconnected(None).await;
                         break;
                     }
                 }
@@ -76,20 +76,20 @@ pub(super) async fn connection_event_loop<T>(
             event = conn.select_next_some() => {
                 match event {
                     StreamEvent::InboundSubscriptionRequest(request) => {
-                        handler.message_received(PublishedMessage::from_request(&request));
+                        handler.message_received(PublishedMessage::from_request(&request)).await;
                         request.respond(Ok(true)).ok();
                     }
 
                     StreamEvent::InboundError(error) => {
-                        handler.inbound_error(error);
+                        handler.inbound_error(error).await;
                     }
 
                     StreamEvent::OutboundError(error) => {
-                        handler.outbound_error(error);
+                        handler.outbound_error(error).await;
                     }
 
                     StreamEvent::ConnectionClosed(frame) => {
-                        handler.disconnected(frame);
+                        handler.disconnected(frame).await;
                         conn.reset();
                     }
                 }

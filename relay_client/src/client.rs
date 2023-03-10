@@ -1,6 +1,7 @@
 use {
     self::connection::{connection_event_loop, ConnectionControl},
     crate::{ConnectionOptions, Error},
+    async_trait::async_trait,
     relay_rpc::{
         domain::{SubscriptionId, Topic},
         rpc::{BatchSubscribe, BatchUnsubscribe, Publish, Subscribe, Subscription, Unsubscribe},
@@ -44,23 +45,24 @@ impl PublishedMessage {
 }
 
 /// Handlers for the RPC stream events.
+#[async_trait]
 pub trait ConnectionHandler: Send + 'static {
     /// Called when a connection to the Relay is established.
-    fn connected(&mut self) {}
+    async fn connected(&mut self) {}
 
     /// Called when the Relay connection is closed.
-    fn disconnected(&mut self, _frame: Option<CloseFrame<'static>>) {}
+    async fn disconnected(&mut self, _frame: Option<CloseFrame<'static>>) {}
 
     /// Called when a message is received from the Relay.
-    fn message_received(&mut self, message: PublishedMessage);
+    async fn message_received(&mut self, message: PublishedMessage);
 
     /// Called when an inbound error occurs, such as data deserialization
     /// failure, or an unknown response message ID.
-    fn inbound_error(&mut self, _error: Error) {}
+    async fn inbound_error(&mut self, _error: Error) {}
 
     /// Called when an outbound error occurs, i.e. failed to write to the
     /// websocket stream.
-    fn outbound_error(&mut self, _error: Error) {}
+    async fn outbound_error(&mut self, _error: Error) {}
 }
 
 /// The Relay RPC client.

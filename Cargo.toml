@@ -26,6 +26,7 @@ relay_rpc = { path = "./relay_rpc", optional = true }
 
 [dev-dependencies]
 anyhow = "1"
+async-trait = "0.1"
 structopt = { version = "0.3", default-features = false }
 tokio = { version = "1.22", features = ["full"] }
 

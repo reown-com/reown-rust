@@ -1,4 +1,5 @@
 use {
+    async_trait::async_trait,
     relay_client::{
         Client,
         CloseFrame,
@@ -36,27 +37,28 @@ impl Handler {
     }
 }
 
+#[async_trait]
 impl ConnectionHandler for Handler {
-    fn connected(&mut self) {
+    async fn connected(&mut self) {
         println!("[{}] connection open", self.name);
     }
 
-    fn disconnected(&mut self, frame: Option<CloseFrame<'static>>) {
+    async fn disconnected(&mut self, frame: Option<CloseFrame<'static>>) {
         println!("[{}] connection closed: frame={frame:?}", self.name);
     }
 
-    fn message_received(&mut self, message: PublishedMessage) {
+    async fn message_received(&mut self, message: PublishedMessage) {
         println!(
             "[{}] inbound message: topic={} message={}",
             self.name, message.topic, message.message
         );
     }
 
-    fn inbound_error(&mut self, error: Error) {
+    async fn inbound_error(&mut self, error: Error) {
         println!("[{}] inbound error: {error}", self.name);
     }
 
-    fn outbound_error(&mut self, error: Error) {
+    async fn outbound_error(&mut self, error: Error) {
         println!("[{}] outbound error: {error}", self.name);
     }
 }
