@@ -114,7 +114,7 @@ pub struct JwtClaims<'a> {
 }
 
 impl<'a> JwtClaims<'a> {
-    pub fn is_valid(
+    pub fn validate(
         &self,
         aud: &HashSet<String>,
         time_leeway: impl Into<Option<i64>>,
@@ -271,7 +271,7 @@ impl Jwt {
             .map_err(|_| JwtVerificationError::Serialization)?;
 
         // Basic token validation: `iat`, `exp` and `aud`.
-        claims.is_valid(aud, None)?;
+        claims.validate(aud, None)?;
 
         let did_key = claims
             .iss
