@@ -1,9 +1,9 @@
 use {
-    ed25519_dalek::Keypair,
-    relay_rpc::{
+    crate::{
         auth::{AuthToken, Jwt, JwtVerificationError, JWT_VALIDATION_TIME_LEEWAY_SECS},
         domain::{ClientIdDecodingError, DecodedAuthSubject},
     },
+    ed25519_dalek::Keypair,
     std::{collections::HashSet, time::Duration},
 };
 
