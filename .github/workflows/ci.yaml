@@ -78,3 +78,17 @@ jobs:
         with:
           github_token: ${{ secrets.github_token }}
           locale: "US"
+
+  cocogitto:
+    name: cocogitto
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: "Conventional commit check"
+        uses: cocogitto/cocogitto-action@v3
+        with:
+          check: true
+          check-latest-tag-only: true
