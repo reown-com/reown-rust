@@ -7,6 +7,7 @@ use {
     },
     serde::Serialize,
     tokio_tungstenite::tungstenite::{client::IntoClientRequest, http},
+    url::Url,
 };
 
 mod client;
@@ -102,7 +103,10 @@ impl ConnectionOptions {
             serde_qs::to_string(&query).map_err(RequestBuildError::Query)?
         };
 
-        let mut request = format!("{address}/?{query}")
+        let mut url = Url::parse(&address).map_err(RequestBuildError::Url)?;
+        url.set_query(Some(&query));
+
+        let mut request = url
             .into_client_request()
             .map_err(RequestBuildError::Other)?;
 

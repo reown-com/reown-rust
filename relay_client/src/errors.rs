@@ -29,6 +29,9 @@ pub enum RequestBuildError {
     #[error("Failed to add request headers")]
     Headers,
 
+    #[error("Failed to parse connection URL: {0}")]
+    Url(#[from] url::ParseError),
+
     #[error("Failed to create websocket request: {0}")]
     Other(WsError),
 }

@@ -21,3 +21,4 @@ tokio-stream = "0.1"
 tokio-util = "0.7"
 pin-project = "1.0"
 chrono = { version = "0.4", default-features = false, features = ["alloc", "std"] }
+url = "2.3"
