@@ -124,11 +124,11 @@ impl<'a> JwtClaims<'a> {
             .unwrap_or(JWT_VALIDATION_TIME_LEEWAY_SECS);
         let now = Utc::now().timestamp();
 
-        if !(now - time_leeway <= self.exp) {
+        if now - time_leeway > self.exp {
             return Err(JwtVerificationError::Expired);
         }
 
-        if !(now + time_leeway >= self.iat) {
+        if now + time_leeway < self.iat {
             return Err(JwtVerificationError::NotYetValid);
         }
 
