@@ -366,10 +366,7 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::BatchSubscribe(BatchSubscribe { topics: vec![] }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::BatchSubscriptionListEmpty)
-    );
+    assert_eq!(request.validate(), Err(ValidationError::BatchEmpty));
 
     // Batch subscription: too many items.
     let topics = (0..MAX_SUBSCRIPTION_BATCH_SIZE + 1)
@@ -382,7 +379,10 @@ fn validation() {
     };
     assert_eq!(
         request.validate(),
-        Err(ValidationError::BatchSubscriptionLimit)
+        Err(ValidationError::BatchLimitExceeded {
+            limit: MAX_SUBSCRIPTION_BATCH_SIZE,
+            actual: MAX_SUBSCRIPTION_BATCH_SIZE + 1
+        })
     );
 
     // Batch subscription: invalid topic.
@@ -421,10 +421,7 @@ fn validation() {
             subscriptions: vec![],
         }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::BatchSubscriptionListEmpty)
-    );
+    assert_eq!(request.validate(), Err(ValidationError::BatchEmpty));
 
     // Batch unsubscription: too many items.
     let subscriptions = (0..MAX_SUBSCRIPTION_BATCH_SIZE + 1)
@@ -440,7 +437,10 @@ fn validation() {
     };
     assert_eq!(
         request.validate(),
-        Err(ValidationError::BatchSubscriptionLimit)
+        Err(ValidationError::BatchLimitExceeded {
+            limit: MAX_SUBSCRIPTION_BATCH_SIZE,
+            actual: MAX_SUBSCRIPTION_BATCH_SIZE + 1
+        })
     );
 
     // Batch unsubscription: invalid topic.
