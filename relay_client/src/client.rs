@@ -3,7 +3,16 @@ use {
     crate::{ConnectionOptions, Error},
     relay_rpc::{
         domain::{SubscriptionId, Topic},
-        rpc::{BatchSubscribe, BatchUnsubscribe, Publish, Subscribe, Subscription, Unsubscribe},
+        rpc::{
+            BatchFetch,
+            BatchSubscribe,
+            BatchUnsubscribe,
+            Fetch,
+            Publish,
+            Subscribe,
+            Subscription,
+            Unsubscribe,
+        },
     },
     std::{sync::Arc, time::Duration},
     tokio::sync::{
@@ -12,9 +21,10 @@ use {
     },
     tokio_tungstenite::tungstenite::protocol::CloseFrame,
 };
-pub use {inbound::*, outbound::*, stream::*};
+pub use {fetch::*, inbound::*, outbound::*, stream::*};
 
 mod connection;
+mod fetch;
 mod inbound;
 mod outbound;
 mod stream;
@@ -131,6 +141,20 @@ impl Client {
         EmptyResponseFuture::new(response)
     }
 
+    /// Fetch mailbox messages for a specific topic.
+    pub fn fetch(&self, topic: Topic) -> ResponseFuture<Fetch> {
+        let (request, response) = create_request(Fetch { topic });
+
+        self.request(request);
+
+        response
+    }
+
+    /// Fetch mailbox messages for a specific topic. Returns a [`Stream`].
+    pub fn fetch_stream(&self, topics: impl Into<Vec<Topic>>) -> FetchMessageStream {
+        FetchMessageStream::new(self.clone(), topics.into())
+    }
+
     /// Subscribes on multiple topics to receive messages.
     pub fn batch_subscribe(&self, topics: impl Into<Vec<Topic>>) -> ResponseFuture<BatchSubscribe> {
         let (request, response) = create_request(BatchSubscribe {
@@ -154,6 +178,17 @@ impl Client {
         self.request(request);
 
         EmptyResponseFuture::new(response)
+    }
+
+    /// Fetch mailbox messages for multiple topics.
+    pub fn batch_fetch(&self, topics: impl Into<Vec<Topic>>) -> ResponseFuture<BatchFetch> {
+        let (request, response) = create_request(BatchFetch {
+            topics: topics.into(),
+        });
+
+        self.request(request);
+
+        response
     }
 
     /// Opens a connection to the Relay.
@@ -187,7 +222,7 @@ impl Client {
         }
     }
 
-    fn request(&self, request: OutboundRequest) {
+    pub(crate) fn request(&self, request: OutboundRequest) {
         if let Err(err) = self
             .control_tx
             .send(ConnectionControl::OutboundRequest(request))
