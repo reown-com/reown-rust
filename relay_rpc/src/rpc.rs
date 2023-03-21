@@ -337,12 +337,12 @@ impl RequestPayload for Unsubscribe {
 
 /// Data structure representing fetch request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Fetch {
+pub struct FetchMessages {
     /// The topic of the messages to fetch.
     pub topic: Topic,
 }
 
-impl RequestPayload for Fetch {
+impl RequestPayload for FetchMessages {
     type Error = GenericError;
     type Response = FetchResponse;
 
@@ -355,7 +355,7 @@ impl RequestPayload for Fetch {
     }
 
     fn into_params(self) -> Params {
-        Params::Fetch(self)
+        Params::FetchMessages(self)
     }
 }
 
@@ -447,12 +447,12 @@ impl RequestPayload for BatchUnsubscribe {
 
 /// Data structure representing batch fetch request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct BatchFetch {
+pub struct BatchFetchMessages {
     /// The topics of the messages to fetch.
     pub topics: Vec<Topic>,
 }
 
-impl RequestPayload for BatchFetch {
+impl RequestPayload for BatchFetchMessages {
     type Error = GenericError;
     type Response = FetchResponse;
 
@@ -478,7 +478,7 @@ impl RequestPayload for BatchFetch {
     }
 
     fn into_params(self) -> Params {
-        Params::BatchFetch(self)
+        Params::BatchFetchMessages(self)
     }
 }
 
@@ -636,8 +636,8 @@ pub enum Params {
     Unsubscribe(Unsubscribe),
 
     /// Parameters to fetch.
-    #[serde(rename = "irn_fetch", alias = "iridium_fetch")]
-    Fetch(Fetch),
+    #[serde(rename = "irn_fetchMessages", alias = "iridium_fetchMessages")]
+    FetchMessages(FetchMessages),
 
     /// Parameters to batch subscribe.
     #[serde(rename = "irn_batchSubscribe", alias = "iridium_batchSubscribe")]
@@ -648,8 +648,11 @@ pub enum Params {
     BatchUnsubscribe(BatchUnsubscribe),
 
     /// Parameters to batch fetch.
-    #[serde(rename = "irn_batchFetch", alias = "iridium_batchFetch")]
-    BatchFetch(BatchFetch),
+    #[serde(
+        rename = "irn_batchFetchMessages",
+        alias = "iridium_batchFetchMessages"
+    )]
+    BatchFetchMessages(BatchFetchMessages),
 
     /// Parameters to publish.
     #[serde(rename = "irn_publish", alias = "iridium_publish")]
@@ -696,10 +699,10 @@ impl Request {
         match &self.params {
             Params::Subscribe(params) => params.validate(),
             Params::Unsubscribe(params) => params.validate(),
-            Params::Fetch(params) => params.validate(),
+            Params::FetchMessages(params) => params.validate(),
             Params::BatchSubscribe(params) => params.validate(),
             Params::BatchUnsubscribe(params) => params.validate(),
-            Params::BatchFetch(params) => params.validate(),
+            Params::BatchFetchMessages(params) => params.validate(),
             Params::Publish(params) => params.validate(),
             Params::Subscription(params) => params.validate(),
         }

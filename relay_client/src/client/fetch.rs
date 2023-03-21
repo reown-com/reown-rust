@@ -3,7 +3,7 @@ use {
     futures_util::{FutureExt, Stream},
     relay_rpc::{
         domain::Topic,
-        rpc::{BatchFetch, SubscriptionData},
+        rpc::{BatchFetchMessages, SubscriptionData},
     },
     std::{
         pin::Pin,
@@ -15,15 +15,15 @@ use {
 /// the Relay.
 pub struct FetchMessageStream {
     client: Client,
-    request: BatchFetch,
+    request: BatchFetchMessages,
     batch: Option<std::vec::IntoIter<SubscriptionData>>,
-    batch_fut: Option<ResponseFuture<BatchFetch>>,
+    batch_fut: Option<ResponseFuture<BatchFetchMessages>>,
     has_more: bool,
 }
 
 impl FetchMessageStream {
     pub(super) fn new(client: Client, topics: impl Into<Vec<Topic>>) -> Self {
-        let request = BatchFetch {
+        let request = BatchFetchMessages {
             topics: topics.into(),
         };
 

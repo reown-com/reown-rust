@@ -298,7 +298,7 @@ fn validation() {
     let request = Request {
         id,
         jsonrpc: jsonrpc.clone(),
-        params: Params::Fetch(Fetch {
+        params: Params::FetchMessages(FetchMessages {
             topic: topic.clone(),
         }),
     };
@@ -308,7 +308,7 @@ fn validation() {
     let request = Request {
         id,
         jsonrpc: jsonrpc.clone(),
-        params: Params::Fetch(Fetch {
+        params: Params::FetchMessages(FetchMessages {
             topic: Topic::from("invalid"),
         }),
     };
@@ -488,7 +488,7 @@ fn validation() {
     let request = Request {
         id,
         jsonrpc: jsonrpc.clone(),
-        params: Params::BatchFetch(BatchFetch {
+        params: Params::BatchFetchMessages(BatchFetchMessages {
             topics: vec![Topic::generate()],
         }),
     };
@@ -498,7 +498,7 @@ fn validation() {
     let request = Request {
         id,
         jsonrpc: jsonrpc.clone(),
-        params: Params::BatchFetch(BatchFetch { topics: vec![] }),
+        params: Params::BatchFetchMessages(BatchFetchMessages { topics: vec![] }),
     };
     assert_eq!(request.validate(), Err(ValidationError::BatchEmpty));
 
@@ -509,7 +509,7 @@ fn validation() {
     let request = Request {
         id,
         jsonrpc: jsonrpc.clone(),
-        params: Params::BatchFetch(BatchFetch { topics }),
+        params: Params::BatchFetchMessages(BatchFetchMessages { topics }),
     };
     assert_eq!(
         request.validate(),
@@ -523,7 +523,7 @@ fn validation() {
     let request = Request {
         id,
         jsonrpc,
-        params: Params::BatchFetch(BatchFetch {
+        params: Params::BatchFetchMessages(BatchFetchMessages {
             topics: vec![Topic::from(
                 "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c98401",
             )],

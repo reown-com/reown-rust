@@ -4,10 +4,10 @@ use {
     relay_rpc::{
         domain::{SubscriptionId, Topic},
         rpc::{
-            BatchFetch,
+            BatchFetchMessages,
             BatchSubscribe,
             BatchUnsubscribe,
-            Fetch,
+            FetchMessages,
             Publish,
             Subscribe,
             Subscription,
@@ -142,8 +142,8 @@ impl Client {
     }
 
     /// Fetch mailbox messages for a specific topic.
-    pub fn fetch(&self, topic: Topic) -> ResponseFuture<Fetch> {
-        let (request, response) = create_request(Fetch { topic });
+    pub fn fetch(&self, topic: Topic) -> ResponseFuture<FetchMessages> {
+        let (request, response) = create_request(FetchMessages { topic });
 
         self.request(request);
 
@@ -181,8 +181,8 @@ impl Client {
     }
 
     /// Fetch mailbox messages for multiple topics.
-    pub fn batch_fetch(&self, topics: impl Into<Vec<Topic>>) -> ResponseFuture<BatchFetch> {
-        let (request, response) = create_request(BatchFetch {
+    pub fn batch_fetch(&self, topics: impl Into<Vec<Topic>>) -> ResponseFuture<BatchFetchMessages> {
+        let (request, response) = create_request(BatchFetchMessages {
             topics: topics.into(),
         });
 
