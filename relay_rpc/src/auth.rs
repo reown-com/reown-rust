@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests;
 
+pub mod cacao;
+pub mod did;
+
 use {
     crate::domain::{AuthSubject, ClientId, ClientIdDecodingError, DecodedClientId},
     chrono::{DateTime, Utc},
