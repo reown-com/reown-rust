@@ -21,6 +21,11 @@ pub static JSON_RPC_VERSION: once_cell::sync::Lazy<Arc<str>> =
 /// See <https://github.com/WalletConnect/walletconnect-docs/blob/main/docs/specs/servers/relay/relay-server-rpc.md>
 pub const MAX_SUBSCRIPTION_BATCH_SIZE: usize = 500;
 
+/// The maximum number of topics allowed for a batch fetch request.
+///
+/// See <https://github.com/WalletConnect/walletconnect-docs/blob/main/docs/specs/servers/relay/relay-server-rpc.md>
+pub const MAX_FETCH_BATCH_SIZE: usize = 500;
+
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 /// Errors covering payload validation problems.
@@ -35,14 +40,11 @@ pub enum ValidationError {
     #[error("Invalid JSON RPC version")]
     JsonRpcVersion,
 
-    #[error(
-        "The batch contains too many items. Maximum number of subscriptions is {}",
-        MAX_SUBSCRIPTION_BATCH_SIZE
-    )]
-    BatchSubscriptionLimit,
+    #[error("The batch contains too many items ({actual}). Maximum number of items is {limit}")]
+    BatchLimitExceeded { limit: usize, actual: usize },
 
     #[error("The batch contains no items")]
-    BatchSubscriptionListEmpty,
+    BatchEmpty,
 }
 
 /// Errors caught while processing the request. These are meant to be serialized
@@ -333,6 +335,42 @@ impl RequestPayload for Unsubscribe {
     }
 }
 
+/// Data structure representing fetch request params.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct FetchMessages {
+    /// The topic of the messages to fetch.
+    pub topic: Topic,
+}
+
+impl RequestPayload for FetchMessages {
+    type Error = GenericError;
+    type Response = FetchResponse;
+
+    fn validate(&self) -> Result<(), ValidationError> {
+        self.topic
+            .decode()
+            .map_err(ValidationError::TopicDecoding)?;
+
+        Ok(())
+    }
+
+    fn into_params(self) -> Params {
+        Params::FetchMessages(self)
+    }
+}
+
+/// Data structure representing fetch response.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FetchResponse {
+    /// Array of messages fetched from the mailbox.
+    pub messages: Vec<SubscriptionData>,
+
+    /// Flag that indicates whether the client should keep fetching the
+    /// messages.
+    pub has_more: bool,
+}
+
 /// Multi-topic subscription request parameters.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BatchSubscribe {
@@ -345,12 +383,17 @@ impl RequestPayload for BatchSubscribe {
     type Response = Vec<SubscriptionId>;
 
     fn validate(&self) -> Result<(), ValidationError> {
-        if self.topics.is_empty() {
-            return Err(ValidationError::BatchSubscriptionListEmpty);
+        let batch_size = self.topics.len();
+
+        if batch_size == 0 {
+            return Err(ValidationError::BatchEmpty);
         }
 
-        if self.topics.len() > MAX_SUBSCRIPTION_BATCH_SIZE {
-            return Err(ValidationError::BatchSubscriptionLimit);
+        if batch_size > MAX_SUBSCRIPTION_BATCH_SIZE {
+            return Err(ValidationError::BatchLimitExceeded {
+                limit: MAX_SUBSCRIPTION_BATCH_SIZE,
+                actual: batch_size,
+            });
         }
 
         for topic in &self.topics {
@@ -377,12 +420,17 @@ impl RequestPayload for BatchUnsubscribe {
     type Response = bool;
 
     fn validate(&self) -> Result<(), ValidationError> {
-        if self.subscriptions.is_empty() {
-            return Err(ValidationError::BatchSubscriptionListEmpty);
+        let batch_size = self.subscriptions.len();
+
+        if batch_size == 0 {
+            return Err(ValidationError::BatchEmpty);
         }
 
-        if self.subscriptions.len() > MAX_SUBSCRIPTION_BATCH_SIZE {
-            return Err(ValidationError::BatchSubscriptionLimit);
+        if batch_size > MAX_SUBSCRIPTION_BATCH_SIZE {
+            return Err(ValidationError::BatchLimitExceeded {
+                limit: MAX_SUBSCRIPTION_BATCH_SIZE,
+                actual: batch_size,
+            });
         }
 
         for sub in &self.subscriptions {
@@ -394,6 +442,43 @@ impl RequestPayload for BatchUnsubscribe {
 
     fn into_params(self) -> Params {
         Params::BatchUnsubscribe(self)
+    }
+}
+
+/// Data structure representing batch fetch request params.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BatchFetchMessages {
+    /// The topics of the messages to fetch.
+    pub topics: Vec<Topic>,
+}
+
+impl RequestPayload for BatchFetchMessages {
+    type Error = GenericError;
+    type Response = FetchResponse;
+
+    fn validate(&self) -> Result<(), ValidationError> {
+        let batch_size = self.topics.len();
+
+        if batch_size == 0 {
+            return Err(ValidationError::BatchEmpty);
+        }
+
+        if batch_size > MAX_FETCH_BATCH_SIZE {
+            return Err(ValidationError::BatchLimitExceeded {
+                limit: MAX_FETCH_BATCH_SIZE,
+                actual: batch_size,
+            });
+        }
+
+        for topic in &self.topics {
+            topic.decode().map_err(ValidationError::TopicDecoding)?;
+        }
+
+        Ok(())
+    }
+
+    fn into_params(self) -> Params {
+        Params::BatchFetchMessages(self)
     }
 }
 
@@ -550,6 +635,10 @@ pub enum Params {
     #[serde(rename = "irn_unsubscribe", alias = "iridium_unsubscribe")]
     Unsubscribe(Unsubscribe),
 
+    /// Parameters to fetch.
+    #[serde(rename = "irn_fetchMessages", alias = "iridium_fetchMessages")]
+    FetchMessages(FetchMessages),
+
     /// Parameters to batch subscribe.
     #[serde(rename = "irn_batchSubscribe", alias = "iridium_batchSubscribe")]
     BatchSubscribe(BatchSubscribe),
@@ -557,6 +646,13 @@ pub enum Params {
     /// Parameters to batch unsubscribe.
     #[serde(rename = "irn_batchUnsubscribe", alias = "iridium_batchUnsubscribe")]
     BatchUnsubscribe(BatchUnsubscribe),
+
+    /// Parameters to batch fetch.
+    #[serde(
+        rename = "irn_batchFetchMessages",
+        alias = "iridium_batchFetchMessages"
+    )]
+    BatchFetchMessages(BatchFetchMessages),
 
     /// Parameters to publish.
     #[serde(rename = "irn_publish", alias = "iridium_publish")]
@@ -603,8 +699,10 @@ impl Request {
         match &self.params {
             Params::Subscribe(params) => params.validate(),
             Params::Unsubscribe(params) => params.validate(),
+            Params::FetchMessages(params) => params.validate(),
             Params::BatchSubscribe(params) => params.validate(),
             Params::BatchUnsubscribe(params) => params.validate(),
+            Params::BatchFetchMessages(params) => params.validate(),
             Params::Publish(params) => params.validate(),
             Params::Subscription(params) => params.validate(),
         }

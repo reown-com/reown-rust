@@ -294,6 +294,29 @@ fn validation() {
         Err(ValidationError::TopicDecoding(DecodingError::Length))
     );
 
+    // Fetch: valid.
+    let request = Request {
+        id,
+        jsonrpc: jsonrpc.clone(),
+        params: Params::FetchMessages(FetchMessages {
+            topic: topic.clone(),
+        }),
+    };
+    assert_eq!(request.validate(), Ok(()));
+
+    // Fetch: invalid topic.
+    let request = Request {
+        id,
+        jsonrpc: jsonrpc.clone(),
+        params: Params::FetchMessages(FetchMessages {
+            topic: Topic::from("invalid"),
+        }),
+    };
+    assert_eq!(
+        request.validate(),
+        Err(ValidationError::TopicDecoding(DecodingError::Length))
+    );
+
     // Subscription: valid.
     let request = Request {
         id,
@@ -366,10 +389,7 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::BatchSubscribe(BatchSubscribe { topics: vec![] }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::BatchSubscriptionListEmpty)
-    );
+    assert_eq!(request.validate(), Err(ValidationError::BatchEmpty));
 
     // Batch subscription: too many items.
     let topics = (0..MAX_SUBSCRIPTION_BATCH_SIZE + 1)
@@ -382,7 +402,10 @@ fn validation() {
     };
     assert_eq!(
         request.validate(),
-        Err(ValidationError::BatchSubscriptionLimit)
+        Err(ValidationError::BatchLimitExceeded {
+            limit: MAX_SUBSCRIPTION_BATCH_SIZE,
+            actual: MAX_SUBSCRIPTION_BATCH_SIZE + 1
+        })
     );
 
     // Batch subscription: invalid topic.
@@ -421,10 +444,7 @@ fn validation() {
             subscriptions: vec![],
         }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::BatchSubscriptionListEmpty)
-    );
+    assert_eq!(request.validate(), Err(ValidationError::BatchEmpty));
 
     // Batch unsubscription: too many items.
     let subscriptions = (0..MAX_SUBSCRIPTION_BATCH_SIZE + 1)
@@ -440,13 +460,16 @@ fn validation() {
     };
     assert_eq!(
         request.validate(),
-        Err(ValidationError::BatchSubscriptionLimit)
+        Err(ValidationError::BatchLimitExceeded {
+            limit: MAX_SUBSCRIPTION_BATCH_SIZE,
+            actual: MAX_SUBSCRIPTION_BATCH_SIZE + 1
+        })
     );
 
     // Batch unsubscription: invalid topic.
     let request = Request {
         id,
-        jsonrpc,
+        jsonrpc: jsonrpc.clone(),
         params: Params::BatchUnsubscribe(BatchUnsubscribe {
             subscriptions: vec![Unsubscribe {
                 topic: Topic::from(
@@ -454,6 +477,56 @@ fn validation() {
                 ),
                 subscription_id,
             }],
+        }),
+    };
+    assert_eq!(
+        request.validate(),
+        Err(ValidationError::TopicDecoding(DecodingError::Length))
+    );
+
+    // Batch fetch: valid.
+    let request = Request {
+        id,
+        jsonrpc: jsonrpc.clone(),
+        params: Params::BatchFetchMessages(BatchFetchMessages {
+            topics: vec![Topic::generate()],
+        }),
+    };
+    assert_eq!(request.validate(), Ok(()));
+
+    // Batch fetch: empty list.
+    let request = Request {
+        id,
+        jsonrpc: jsonrpc.clone(),
+        params: Params::BatchFetchMessages(BatchFetchMessages { topics: vec![] }),
+    };
+    assert_eq!(request.validate(), Err(ValidationError::BatchEmpty));
+
+    // Batch fetch: too many items.
+    let topics = (0..MAX_SUBSCRIPTION_BATCH_SIZE + 1)
+        .map(|_| Topic::generate())
+        .collect();
+    let request = Request {
+        id,
+        jsonrpc: jsonrpc.clone(),
+        params: Params::BatchFetchMessages(BatchFetchMessages { topics }),
+    };
+    assert_eq!(
+        request.validate(),
+        Err(ValidationError::BatchLimitExceeded {
+            limit: MAX_SUBSCRIPTION_BATCH_SIZE,
+            actual: MAX_SUBSCRIPTION_BATCH_SIZE + 1
+        })
+    );
+
+    // Batch fetch: invalid topic.
+    let request = Request {
+        id,
+        jsonrpc,
+        params: Params::BatchFetchMessages(BatchFetchMessages {
+            topics: vec![Topic::from(
+                "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c98401",
+            )],
         }),
     };
     assert_eq!(

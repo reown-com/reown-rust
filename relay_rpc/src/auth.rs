@@ -158,7 +158,7 @@ pub fn encode_auth_token(
     let iss = {
         let client_id = DecodedClientId(*key.public_key().as_bytes());
 
-        format!("{DID_PREFIX}{DID_DELIMITER}{DID_METHOD}{DID_DELIMITER}{client_id}",)
+        format!("{DID_PREFIX}{DID_DELIMITER}{DID_METHOD}{DID_DELIMITER}{client_id}")
     };
 
     let claims = {
