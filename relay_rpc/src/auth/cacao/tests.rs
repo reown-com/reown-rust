@@ -2,7 +2,7 @@ use crate::auth::cacao::Cacao;
 
 /// Test that we can verify a Cacao
 #[test]
-fn cacao_verify_success() {
+fn verify_success() {
     let cacao_serialized = r#"{
       "h": {
         "t": "eip4361"
@@ -34,7 +34,7 @@ fn cacao_verify_success() {
 
 /// Test that we can verify a Cacao with uppercase address
 #[test]
-fn cacao_without_lowercase_address_verify_success() {
+fn without_lowercase_address_verify_success() {
     let cacao_serialized = r#"{"h":{"t":"eip4361"},"p":{"iss":"did:pkh:eip155:1:0xbD4D1935165012e7D29919dB8717A5e670a1a5b1","domain":"https://staging.keys.walletconnect.com","aud":"https://staging.keys.walletconnect.com","version":"1","nonce":"07487c09be5535dcbc341d8e35e5c9b4d3539a802089c42c5b1172dd9ed63c64","iat":"2023-01-25T15:08:36.846Z","statement":"Test","resources":["did:key:451cf9b97c64fcca05fbb0d4c40b886c94133653df5a2b6bd97bd29a0bbcdb37"]},"s":{"t":"eip191","s":"0x8496ad1dd1ddd5cb78ac26b62a6bd1c6cfff703ea3b11a9da29cfca112357ace75cac8ee28d114f9e166a6935ee9ed83151819a9e0ee738a0547116b1d978e351b"}}"#;
     let cacao: Cacao = serde_json::from_str(cacao_serialized).unwrap();
     let result = cacao.verify();

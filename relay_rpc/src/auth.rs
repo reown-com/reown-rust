@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "cacao")]
 pub mod cacao;
 pub mod did;
 

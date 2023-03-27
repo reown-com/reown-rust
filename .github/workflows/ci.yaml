@@ -36,11 +36,11 @@ jobs:
             rust: nightly
           - name: "Tests"
             cmd: nextest
-            args: run --workspace --retries 3
+            args: run --workspace --all-features --features cacao --retries 3
             rust: stable
           - name: "Documentation Tests"
             cmd: test
-            args: --workspace --doc
+            args: --workspace --doc --all-features
             rust: stable
     env:
       RUST_BACKTRACE: full

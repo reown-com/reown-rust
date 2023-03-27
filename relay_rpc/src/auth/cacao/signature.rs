@@ -37,7 +37,8 @@ impl Eip191 {
             sha3::{Digest, Keccak256},
         };
 
-        let signature_bytes = hex::decode(guarantee_no_hex_prefix(signature))
+        let signature_bytes = data_encoding::HEXLOWER_PERMISSIVE
+            .decode(strip_hex_prefix(signature).as_bytes())
             .map_err(|_| CacaoError::Verification)?;
 
         let sig = Sig::try_from(&signature_bytes[..64]).map_err(|_| CacaoError::Verification)?;
@@ -45,7 +46,7 @@ impl Eip191 {
             .map_err(|_| CacaoError::Verification)?;
 
         let recovered_key = VerifyingKey::recover_from_digest(
-            Keccak256::new_with_prefix(&self.eip191_bytes(message)),
+            Keccak256::new_with_prefix(self.eip191_bytes(message)),
             &sig,
             recovery_id,
         )
@@ -55,9 +56,9 @@ impl Eip191 {
             .chain_update(&recovered_key.to_encoded_point(false).as_bytes()[1..])
             .finalize()[12..];
 
-        let address_encoded = hex::encode(add);
+        let address_encoded = data_encoding::HEXLOWER_PERMISSIVE.encode(add);
 
-        if address_encoded.to_lowercase() != guarantee_no_hex_prefix(address).to_lowercase() {
+        if address_encoded.to_lowercase() != strip_hex_prefix(address).to_lowercase() {
             Err(CacaoError::Verification)
         } else {
             Ok(true)
@@ -65,11 +66,7 @@ impl Eip191 {
     }
 }
 
-/// Remove the 0x prefix from a hex string
-fn guarantee_no_hex_prefix(s: &str) -> &str {
-    if let Some(stripped) = s.strip_prefix("0x") {
-        stripped
-    } else {
-        s
-    }
+/// Remove the "0x" prefix from a hex string.
+fn strip_hex_prefix(s: &str) -> &str {
+    s.strip_prefix("0x").unwrap_or(s)
 }
