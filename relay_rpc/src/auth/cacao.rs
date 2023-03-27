@@ -2,16 +2,15 @@ use {
     self::{header::Header, payload::Payload, signature::Signature},
     core::fmt::Debug,
     serde::{Deserialize, Serialize},
-    std::fmt::{Display, Write as _},
-    thiserror::Error as ThisError,
+    std::fmt::{Display, Write},
 };
 
 pub mod header;
 pub mod payload;
 pub mod signature;
 
-/// Errors that can occur during JWT verification
-#[derive(Debug, ThisError)]
+/// Errors that can occur during Cacao verification.
+#[derive(Debug, thiserror::Error)]
 pub enum CacaoError {
     #[error("Invalid header")]
     Header,
@@ -27,6 +26,12 @@ pub enum CacaoError {
 
     #[error("Unable to verify")]
     Verification,
+}
+
+impl From<std::fmt::Error> for CacaoError {
+    fn from(_: std::fmt::Error) -> Self {
+        CacaoError::PayloadResources
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -73,8 +78,8 @@ impl Cacao {
     const ETHEREUM: &'static str = "Ethereum";
 
     pub fn verify(&self) -> Result<bool, CacaoError> {
-        self.p.is_valid()?;
-        self.h.is_valid()?;
+        self.p.validate()?;
+        self.h.validate()?;
         self.s.verify(self)
     }
 
@@ -91,10 +96,10 @@ impl Cacao {
         );
 
         if let Some(statement) = &self.p.statement {
-            let _ = write!(message, "\n{}\n", statement);
+            write!(message, "\n{}\n", statement)?;
         }
 
-        let _ = write!(
+        write!(
             message,
             "\nURI: {}\nVersion: {}\nChain ID: {}\nNonce: {}\nIssued At: {}",
             self.p.aud,
@@ -102,26 +107,27 @@ impl Cacao {
             self.p.chain_id()?,
             self.p.nonce,
             self.p.iat
-        );
+        )?;
 
         if let Some(exp) = &self.p.exp {
-            let _ = write!(message, "\nExpiration Time: {}", exp);
+            write!(message, "\nExpiration Time: {}", exp)?;
         }
 
         if let Some(nbf) = &self.p.nbf {
-            let _ = write!(message, "\nNot Before: {}", nbf);
+            write!(message, "\nNot Before: {}", nbf)?;
         }
 
         if let Some(request_id) = &self.p.request_id {
-            let _ = write!(message, "\nRequest ID: {}", request_id);
+            write!(message, "\nRequest ID: {}", request_id)?;
         }
 
         if let Some(resources) = &self.p.resources {
             if !resources.is_empty() {
-                let _ = write!(message, "\nResources:");
-                resources.iter().for_each(|resource| {
-                    let _ = write!(message, "\n- {}", resource);
-                });
+                write!(message, "\nResources:")?;
+
+                for resource in resources {
+                    write!(message, "\n- {}", resource)?;
+                }
             }
         }
 

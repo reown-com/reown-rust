@@ -26,8 +26,8 @@ impl Payload {
     const ISS_POSITION_OF_REFERENCE: usize = 3;
 
     /// TODO: write valdation
-    pub fn is_valid(&self) -> Result<bool, CacaoError> {
-        Ok(true)
+    pub fn validate(&self) -> Result<(), CacaoError> {
+        Ok(())
     }
 
     pub fn address(&self) -> Result<String, CacaoError> {

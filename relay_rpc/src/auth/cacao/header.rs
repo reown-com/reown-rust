@@ -9,7 +9,7 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn is_valid(&self) -> Result<(), CacaoError> {
+    pub fn validate(&self) -> Result<(), CacaoError> {
         match self.t.as_str() {
             "eip4361" => Ok(()),
             _ => Err(CacaoError::Header),
