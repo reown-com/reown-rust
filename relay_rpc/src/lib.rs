@@ -4,5 +4,6 @@
 pub mod auth;
 pub mod domain;
 pub mod macros;
+pub mod managed;
 pub mod rpc;
 pub mod user_agent;

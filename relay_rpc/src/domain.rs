@@ -1,6 +1,7 @@
 use {
     crate::{
         auth::{MULTICODEC_ED25519_BASE, MULTICODEC_ED25519_HEADER, MULTICODEC_ED25519_LENGTH},
+        impl_managed_newtype,
         new_type,
     },
     derive_more::{AsMut, AsRef},
@@ -36,12 +37,7 @@ pub enum DecodingError {
     Length,
 }
 
-new_type!(
-    #[doc = "Represents the client ID type."]
-    #[as_ref(forward)]
-    #[from(forward)]
-    ClientId: Arc<str>
-);
+impl_managed_newtype!(ClientId, str, "debug_live_client_ids");
 
 impl ClientId {
     pub fn decode(&self) -> Result<DecodedClientId, ClientIdDecodingError> {
@@ -51,7 +47,7 @@ impl ClientId {
 
 impl From<DecodedClientId> for ClientId {
     fn from(val: DecodedClientId) -> Self {
-        Self(val.to_string().into())
+        Self::new(val.to_string())
     }
 }
 
@@ -115,26 +111,10 @@ impl std::fmt::Display for DecodedClientId {
     }
 }
 
-new_type!(
-    #[doc = "Represents the topic type."]
-    #[as_ref(forward)]
-    #[from(forward)]
-    Topic: Arc<str>
-);
-
-new_type!(
-    #[doc = "Represents the subscription ID type."]
-    #[as_ref(forward)]
-    #[from(forward)]
-    SubscriptionId: Arc<str>
-);
-
-new_type!(
-    #[doc = "Represents the auth token subject type."]
-    #[as_ref(forward)]
-    #[from(forward)]
-    AuthSubject: Arc<str>
-);
+impl_managed_newtype!(Topic, str, "debug_live_topics");
+impl_managed_newtype!(SubscriptionId, str, "debug_live_subscription_ids");
+impl_managed_newtype!(AuthSubject, str, "debug_live_auth_subjects");
+impl_managed_newtype!(ProjectId, str, "debug_live_project_ids");
 
 new_type!(
     #[doc = "Represents the message ID type."]
@@ -150,13 +130,6 @@ impl MessageId {
         self.0 != 0
     }
 }
-
-new_type!(
-    #[doc = "Represents the project ID type."]
-    #[as_ref(forward)]
-    #[from(forward)]
-    ProjectId: Arc<str>
-);
 
 macro_rules! impl_byte_array_newtype {
     ($NewType:ident, $ParentType:ident, $ByteLength:expr) => {
@@ -212,7 +185,7 @@ macro_rules! impl_byte_array_newtype {
         const _: () = {
             impl $ParentType {
                 pub fn decode(&self) -> Result<$NewType, DecodingError> {
-                    $NewType::try_from(self.clone())
+                    self.value().parse()
                 }
 
                 pub fn generate() -> Self {
@@ -223,7 +196,7 @@ macro_rules! impl_byte_array_newtype {
 
         impl From<$NewType> for $ParentType {
             fn from(val: $NewType) -> Self {
-                Self(val.to_string().into())
+                Self::new(val.to_string())
             }
         }
 
