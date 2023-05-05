@@ -16,9 +16,11 @@ members = [
 full = [
     "client",
     "rpc",
+    "cacao"
 ]
 client = ["dep:relay_client"]
 rpc = ["dep:relay_rpc"]
+cacao = ["dep:relay_rpc"]
 
 [dependencies]
 relay_client = { path = "./relay_client", optional = true }
