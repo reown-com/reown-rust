@@ -12,7 +12,7 @@ use {
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum ClientIdDecodingError {
     #[error("Invalid issuer multicodec base")]
     Base,
@@ -27,7 +27,7 @@ pub enum ClientIdDecodingError {
     Length,
 }
 
-#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+#[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
 pub enum DecodingError {
     #[error("Invalid encoding")]
     Encoding,

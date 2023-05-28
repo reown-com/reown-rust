@@ -4,7 +4,7 @@
 use {
     crate::domain::{DecodingError, MessageId, SubscriptionId, Topic},
     serde::{de::DeserializeOwned, Deserialize, Serialize},
-    std::sync::Arc,
+    std::{fmt::Debug, sync::Arc},
 };
 
 #[cfg(test)]
@@ -29,7 +29,7 @@ pub const MAX_FETCH_BATCH_SIZE: usize = 500;
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 /// Errors covering payload validation problems.
-#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+#[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
 pub enum ValidationError {
     #[error("Topic decoding failed: {0}")]
     TopicDecoding(DecodingError),
@@ -109,14 +109,23 @@ where
     }
 }
 
+pub trait Serializable:
+    Debug + Clone + PartialEq + Eq + Serialize + DeserializeOwned + Send + Sync + 'static
+{
+}
+impl<T> Serializable for T where
+    T: Debug + Clone + PartialEq + Eq + Serialize + DeserializeOwned + Send + Sync + 'static
+{
+}
+
 /// Trait that adds validation capabilities and strong typing to errors and
 /// successful responses. Implemented for all possible RPC request types.
-pub trait RequestPayload {
+pub trait RequestPayload: Serializable {
     /// The error representing a failed request.
-    type Error: Into<ErrorData>;
+    type Error: Into<ErrorData> + Send + 'static;
 
     /// The type of a successful response.
-    type Response: Serialize + DeserializeOwned;
+    type Response: Serializable;
 
     /// Validates the request parameters.
     fn validate(&self) -> Result<(), ValidationError> {
