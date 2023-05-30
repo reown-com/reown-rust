@@ -113,6 +113,33 @@ fn subscription() {
 }
 
 #[test]
+fn batch_receive() {
+    let payload: Payload = Payload::Request(Request::new(
+        1.into(),
+        Params::BatchReceiveMessages(BatchReceiveMessages {
+            receipts: vec![Receipt {
+                topic: Topic::from(
+                    "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840",
+                ),
+                message_id: MessageId::new(123),
+            }],
+        }),
+    ));
+
+    let serialized = serde_json::to_string(&payload).unwrap();
+    eprintln!("{serialized}");
+
+    assert_eq!(
+        &serialized,
+        r#"{"id":1,"jsonrpc":"2.0","method":"irn_batchReceive","params":{"receipts":[{"topic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","message_id":123}]}}"#
+    );
+
+    let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(&payload, &deserialized)
+}
+
+#[test]
 fn watch_register() {
     let params: WatchRegister = WatchRegister {
         register_auth: "jwt".to_owned(),
@@ -575,11 +602,70 @@ fn validation() {
     // Batch fetch: invalid topic.
     let request = Request {
         id,
-        jsonrpc,
+        jsonrpc: jsonrpc.clone(),
         params: Params::BatchFetchMessages(BatchFetchMessages {
             topics: vec![Topic::from(
                 "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c98401",
             )],
+        }),
+    };
+    assert_eq!(
+        request.validate(),
+        Err(ValidationError::TopicDecoding(DecodingError::Length))
+    );
+
+    // Batch receive: valid.
+    let request = Request {
+        id,
+        jsonrpc: jsonrpc.clone(),
+        params: Params::BatchReceiveMessages(BatchReceiveMessages {
+            receipts: vec![Receipt {
+                topic: Topic::generate(),
+                message_id: MessageId::new(1),
+            }],
+        }),
+    };
+    assert_eq!(request.validate(), Ok(()));
+
+    // Batch receive: empty list.
+    let request = Request {
+        id,
+        jsonrpc: jsonrpc.clone(),
+        params: Params::BatchReceiveMessages(BatchReceiveMessages { receipts: vec![] }),
+    };
+    assert_eq!(request.validate(), Err(ValidationError::BatchEmpty));
+
+    // Batch receive: too many items.
+    let receipts = (0..MAX_RECEIVE_BATCH_SIZE + 1)
+        .map(|_| Receipt {
+            topic: Topic::generate(),
+            message_id: MessageId::new(1),
+        })
+        .collect();
+    let request = Request {
+        id,
+        jsonrpc: jsonrpc.clone(),
+        params: Params::BatchReceiveMessages(BatchReceiveMessages { receipts }),
+    };
+    assert_eq!(
+        request.validate(),
+        Err(ValidationError::BatchLimitExceeded {
+            limit: MAX_RECEIVE_BATCH_SIZE,
+            actual: MAX_RECEIVE_BATCH_SIZE + 1
+        })
+    );
+
+    // Batch receive: invalid topic.
+    let request = Request {
+        id,
+        jsonrpc,
+        params: Params::BatchReceiveMessages(BatchReceiveMessages {
+            receipts: vec![Receipt {
+                topic: Topic::from(
+                    "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c98401",
+                ),
+                message_id: MessageId::new(1),
+            }],
         }),
     };
     assert_eq!(
