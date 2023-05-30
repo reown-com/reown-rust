@@ -2,13 +2,14 @@
 //! clients. This also includes communication over HTTP between relays.
 
 use {
-    crate::domain::{DecodingError, MessageId, SubscriptionId, Topic},
+    crate::domain::{DecodingError, DidKey, MessageId, SubscriptionId, Topic},
     serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::{fmt::Debug, sync::Arc},
 };
 
 #[cfg(test)]
 mod tests;
+pub mod watch;
 
 /// Version of the WalletConnect protocol that we're implementing.
 pub const JSON_RPC_VERSION_STR: &str = "2.0";
@@ -584,6 +585,49 @@ where
     *x == Default::default()
 }
 
+/// Data structure representing watch registration request params.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchRegister {
+    /// JWT with [`watch::WatchRegisterClaims`] payload.
+    pub register_auth: String,
+}
+
+impl RequestPayload for WatchRegister {
+    type Error = GenericError;
+    /// The Relay's public key.
+    type Response = DidKey;
+
+    fn validate(&self) -> Result<(), ValidationError> {
+        Ok(())
+    }
+
+    fn into_params(self) -> Params {
+        Params::WatchRegister(self)
+    }
+}
+
+/// Data structure representing watch unregistration request params.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchUnregister {
+    /// JWT with [`watch::WatchUnregisterClaims`] payload.
+    pub unregister_auth: String,
+}
+
+impl RequestPayload for WatchUnregister {
+    type Error = GenericError;
+    type Response = bool;
+
+    fn validate(&self) -> Result<(), ValidationError> {
+        Ok(())
+    }
+
+    fn into_params(self) -> Params {
+        Params::WatchUnregister(self)
+    }
+}
+
 /// Data structure representing subscription request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Subscription {
@@ -670,6 +714,14 @@ pub enum Params {
     #[serde(rename = "irn_publish", alias = "iridium_publish")]
     Publish(Publish),
 
+    /// Parameters to watch register.
+    #[serde(rename = "irn_watchRegister", alias = "iridium_watchRegister")]
+    WatchRegister(WatchRegister),
+
+    /// Parameters to watch unregister.
+    #[serde(rename = "irn_watchUnregister", alias = "iridium_watchUnregister")]
+    WatchUnregister(WatchUnregister),
+
     /// Parameters for a subscription. The messages for any given topic sent to
     /// clients are wrapped into this format. A `publish` message to a topic
     /// results in a `subscription` message to each client subscribed to the
@@ -720,6 +772,8 @@ impl Request {
             Params::BatchUnsubscribe(params) => params.validate(),
             Params::BatchFetchMessages(params) => params.validate(),
             Params::Publish(params) => params.validate(),
+            Params::WatchRegister(params) => params.validate(),
+            Params::WatchUnregister(params) => params.validate(),
             Params::Subscription(params) => params.validate(),
         }
     }

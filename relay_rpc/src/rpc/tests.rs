@@ -113,6 +113,45 @@ fn subscription() {
 }
 
 #[test]
+fn watch_register() {
+    let params: WatchRegister = WatchRegister {
+        register_auth: "jwt".to_owned(),
+    };
+    let payload: Payload = Payload::Request(Request::new(1.into(), Params::WatchRegister(params)));
+
+    let serialized = serde_json::to_string(&payload).unwrap();
+
+    assert_eq!(
+        &serialized,
+        r#"{"id":1,"jsonrpc":"2.0","method":"irn_watchRegister","params":{"registerAuth":"jwt"}}"#
+    );
+
+    let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(&payload, &deserialized)
+}
+
+#[test]
+fn watch_unregister() {
+    let params: WatchUnregister = WatchUnregister {
+        unregister_auth: "jwt".to_owned(),
+    };
+    let payload: Payload =
+        Payload::Request(Request::new(1.into(), Params::WatchUnregister(params)));
+
+    let serialized = serde_json::to_string(&payload).unwrap();
+
+    assert_eq!(
+        &serialized,
+        r#"{"id":1,"jsonrpc":"2.0","method":"irn_watchUnregister","params":{"unregisterAuth":"jwt"}}"#
+    );
+
+    let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(&payload, &deserialized)
+}
+
+#[test]
 fn deserialize_iridium_method() {
     let serialized = r#"{"id":1,"jsonrpc":"2.0","method":"iridium_subscription","params":{"id":"test_id","data":{"topic":"test_topic","message":"test_message","publishedAt":123,"tag":1000}}}"#;
     assert!(serde_json::from_str::<'_, Payload>(serialized).is_ok());

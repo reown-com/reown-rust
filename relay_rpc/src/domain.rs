@@ -1,16 +1,19 @@
 use {
     crate::{
-        auth::{MULTICODEC_ED25519_BASE, MULTICODEC_ED25519_HEADER, MULTICODEC_ED25519_LENGTH},
+        auth::{
+            did::{combine_did_data, extract_did_data, DidError, DID_METHOD_KEY},
+            MULTICODEC_ED25519_BASE,
+            MULTICODEC_ED25519_HEADER,
+            MULTICODEC_ED25519_LENGTH,
+        },
         new_type,
     },
     derive_more::{AsMut, AsRef},
+    ed25519_dalek::PublicKey,
     serde::{Deserialize, Serialize},
     serde_aux::prelude::deserialize_number_from_string,
     std::{str::FromStr, sync::Arc},
 };
-
-#[cfg(test)]
-mod tests;
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum ClientIdDecodingError {
@@ -22,6 +25,9 @@ pub enum ClientIdDecodingError {
 
     #[error("Invalid multicodec header")]
     Header,
+
+    #[error("Invalid DID key data")]
+    Did(#[from] DidError),
 
     #[error("Invalid issuer pubkey length")]
     Length,
@@ -63,10 +69,60 @@ impl TryFrom<ClientId> for DecodedClientId {
     }
 }
 
+impl From<DidKey> for ClientId {
+    fn from(val: DidKey) -> Self {
+        val.0.into()
+    }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, AsRef, AsMut, Serialize, Deserialize)]
+#[as_ref(forward)]
+#[as_mut(forward)]
+pub struct DidKey(
+    #[serde(with = "crate::serde_helpers::client_id_as_did_key")] pub DecodedClientId,
+);
+
+impl From<DecodedClientId> for DidKey {
+    fn from(val: DecodedClientId) -> Self {
+        Self(val)
+    }
+}
+
+impl TryFrom<ClientId> for DidKey {
+    type Error = ClientIdDecodingError;
+
+    fn try_from(value: ClientId) -> Result<Self, Self::Error> {
+        value.decode().map(Self)
+    }
+}
+
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, AsRef, AsMut, Serialize, Deserialize)]
 #[as_ref(forward)]
 #[as_mut(forward)]
 pub struct DecodedClientId(pub [u8; MULTICODEC_ED25519_LENGTH]);
+
+impl DecodedClientId {
+    #[inline]
+    pub fn try_from_did_key(did: &str) -> Result<Self, ClientIdDecodingError> {
+        extract_did_data(did, DID_METHOD_KEY)?.parse()
+    }
+
+    #[inline]
+    pub fn to_did_key(&self) -> String {
+        combine_did_data(DID_METHOD_KEY, &self.to_string())
+    }
+
+    #[inline]
+    pub fn from_key(key: &PublicKey) -> Self {
+        Self(*key.as_bytes())
+    }
+}
+
+impl From<DidKey> for DecodedClientId {
+    fn from(val: DidKey) -> Self {
+        val.0
+    }
+}
 
 impl FromStr for DecodedClientId {
     type Err = ClientIdDecodingError;
@@ -248,3 +304,34 @@ impl_byte_array_newtype!(DecodedTopic, Topic, 32);
 impl_byte_array_newtype!(DecodedSubscription, SubscriptionId, 32);
 impl_byte_array_newtype!(DecodedAuthSubject, AuthSubject, 32);
 impl_byte_array_newtype!(DecodedProjectId, ProjectId, 16);
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn client_id_decoding() {
+        let client_id_str = "z6MkodHZwneVRShtaLf8JKYkxpDGp1vGZnpGmdBpX8M2exxH";
+        let client_id_bin = client_id_str.parse::<DecodedClientId>().unwrap();
+
+        assert_eq!(client_id_str, ClientId::from(client_id_bin).as_ref());
+
+        assert!(matches!(
+            "z6MkodHZwne".parse::<DecodedClientId>(),
+            Err(ClientIdDecodingError::Length)
+        ));
+    }
+
+    #[test]
+    fn topic_decoding() {
+        let topic_str = "85089843cebc89ce5bbffd55377b2e65c8a32c2d0a76742f2d6852b5f531a460";
+        let topic_bin = topic_str.parse::<DecodedTopic>().unwrap();
+
+        assert_eq!(topic_str, Topic::from(topic_bin).as_ref());
+
+        assert!(matches!(
+            "85089843ce".parse::<DecodedTopic>(),
+            Err(DecodingError::Length)
+        ));
+    }
+}
