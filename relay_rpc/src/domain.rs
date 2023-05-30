@@ -26,7 +26,7 @@ pub enum ClientIdDecodingError {
     #[error("Invalid multicodec header")]
     Header,
 
-    #[error("Invalid DID key data")]
+    #[error("Invalid DID key data: {0}")]
     Did(#[from] DidError),
 
     #[error("Invalid issuer pubkey length")]

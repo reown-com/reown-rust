@@ -27,6 +27,11 @@ pub const MAX_SUBSCRIPTION_BATCH_SIZE: usize = 500;
 /// See <https://github.com/WalletConnect/walletconnect-docs/blob/main/docs/specs/servers/relay/relay-server-rpc.md>
 pub const MAX_FETCH_BATCH_SIZE: usize = 500;
 
+/// The maximum number of receipts allowed for a batch receive request.
+///
+/// See <https://github.com/WalletConnect/walletconnect-docs/blob/main/docs/specs/servers/relay/relay-server-rpc.md>
+pub const MAX_RECEIVE_BATCH_SIZE: usize = 500;
+
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 /// Errors covering payload validation problems.
@@ -495,6 +500,56 @@ impl RequestPayload for BatchFetchMessages {
     }
 }
 
+/// Represents a message receipt.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Receipt {
+    /// The topic of the message to acknowledge.
+    pub topic: Topic,
+
+    /// The ID of the message to acknowledge.
+    pub message_id: MessageId,
+}
+
+/// Data structure representing publish request params.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BatchReceiveMessages {
+    /// The receipts to acknowledge.
+    pub receipts: Vec<Receipt>,
+}
+
+impl RequestPayload for BatchReceiveMessages {
+    type Error = GenericError;
+    type Response = bool;
+
+    fn validate(&self) -> Result<(), ValidationError> {
+        let batch_size = self.receipts.len();
+
+        if batch_size == 0 {
+            return Err(ValidationError::BatchEmpty);
+        }
+
+        if batch_size > MAX_RECEIVE_BATCH_SIZE {
+            return Err(ValidationError::BatchLimitExceeded {
+                limit: MAX_RECEIVE_BATCH_SIZE,
+                actual: batch_size,
+            });
+        }
+
+        for receipt in &self.receipts {
+            receipt
+                .topic
+                .decode()
+                .map_err(ValidationError::TopicDecoding)?;
+        }
+
+        Ok(())
+    }
+
+    fn into_params(self) -> Params {
+        Params::BatchReceiveMessages(self)
+    }
+}
+
 /// Data structure representing publish request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Publish {
@@ -714,6 +769,10 @@ pub enum Params {
     #[serde(rename = "irn_publish", alias = "iridium_publish")]
     Publish(Publish),
 
+    /// Parameters to batch receive.
+    #[serde(rename = "irn_batchReceive", alias = "iridium_batchReceive")]
+    BatchReceiveMessages(BatchReceiveMessages),
+
     /// Parameters to watch register.
     #[serde(rename = "irn_watchRegister", alias = "iridium_watchRegister")]
     WatchRegister(WatchRegister),
@@ -772,6 +831,7 @@ impl Request {
             Params::BatchUnsubscribe(params) => params.validate(),
             Params::BatchFetchMessages(params) => params.validate(),
             Params::Publish(params) => params.validate(),
+            Params::BatchReceiveMessages(params) => params.validate(),
             Params::WatchRegister(params) => params.validate(),
             Params::WatchUnregister(params) => params.validate(),
             Params::Subscription(params) => params.validate(),
