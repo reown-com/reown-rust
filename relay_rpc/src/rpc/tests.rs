@@ -194,12 +194,26 @@ fn deserialize_batch_methods() {
 #[test]
 fn validation() {
     // Valid data.
-    let id = MessageId::from(1);
+    let id = MessageId::from(1234567890);
     let jsonrpc: Arc<str> = "2.0".into();
     let message: Arc<str> = "0".repeat(512).into();
     let topic = Topic::from("c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840");
     let subscription_id =
         SubscriptionId::from("c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841");
+
+    // Invalid request ID.
+    let request = Request {
+        id: MessageId::new(1),
+        jsonrpc: jsonrpc.clone(),
+        params: Params::Publish(Publish {
+            topic: topic.clone(),
+            message: message.clone(),
+            ttl_secs: 0,
+            tag: 0,
+            prompt: false,
+        }),
+    };
+    assert_eq!(request.validate(), Err(ValidationError::RequestId));
 
     // Invalid JSONRPC version.
     let request = Request {

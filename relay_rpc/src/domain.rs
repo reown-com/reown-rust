@@ -143,11 +143,18 @@ new_type!(
 );
 
 impl MessageId {
-    pub fn is_valid(&self) -> bool {
+    /// Minimum allowed value of a [`MessageId`].
+    const MIN: Self = Self(1000000000);
+
+    pub(crate) fn validate(&self) -> bool {
+        self.0 >= Self::MIN.0
+    }
+
+    pub fn is_zero(&self) -> bool {
         // Message ID `0` is used when the client request failed to parse for whatever
         // reason, and the server doesn't know the message ID of that request, but still
         // wants to communicate the error.
-        self.0 != 0
+        self.0 == 0
     }
 }
 
