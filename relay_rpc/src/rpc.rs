@@ -37,6 +37,9 @@ pub enum ValidationError {
     #[error("Subscription ID decoding failed: {0}")]
     SubscriptionIdDecoding(DecodingError),
 
+    #[error("Invalid request ID")]
+    RequestId,
+
     #[error("Invalid JSON RPC version")]
     JsonRpcVersion,
 
@@ -701,6 +704,10 @@ impl Request {
 
     /// Validates the request payload.
     pub fn validate(&self) -> Result<(), ValidationError> {
+        if !self.id.validate() {
+            return Err(ValidationError::RequestId);
+        }
+
         if self.jsonrpc.as_ref() != JSON_RPC_VERSION_STR {
             return Err(ValidationError::JsonRpcVersion);
         }

@@ -175,7 +175,7 @@ impl ClientStream {
                         Payload::Response(response) => {
                             let id = response.id();
 
-                            if !id.is_valid() {
+                            if id.is_zero() {
                                 return match response {
                                     Response::Error(response) => {
                                         Some(StreamEvent::InboundError(Error::Rpc {
