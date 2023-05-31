@@ -62,6 +62,8 @@ pub struct WatchUnregisterClaims {
     pub basic: JwtBasicClaims,
     /// Action. Must be `irn_watchUnregister`.
     pub act: WatchAction,
+    /// Watcher type. Either subscriber or publisher.
+    pub typ: WatchType,
     /// Webhook URL.
     pub whu: String,
 }
@@ -174,6 +176,7 @@ mod test {
                 exp: Some(exp.timestamp()),
             },
             act: WatchAction::Unregister,
+            typ: WatchType::Publisher,
             whu: "https://example.com".to_owned(),
         };
 
@@ -181,7 +184,7 @@ mod test {
         // lowercase.
         assert_eq!(
             serde_json::to_string(&claims).unwrap(),
-            r#"{"iss":"did:key:z6Mku3wsRZTAHjr6xrYWVUfyGeNSNz1GJRVfazp3N76AL9gE","aud":"wss://relay.walletconnect.com","sub":"https://example.com","iat":946684800,"exp":32503680000,"act":"irn_watchUnregister","whu":"https://example.com"}"#
+            r#"{"iss":"did:key:z6Mku3wsRZTAHjr6xrYWVUfyGeNSNz1GJRVfazp3N76AL9gE","aud":"wss://relay.walletconnect.com","sub":"https://example.com","iat":946684800,"exp":32503680000,"act":"irn_watchUnregister","typ":"publisher","whu":"https://example.com"}"#
         );
 
         // Verify that the claims can be encoded and decoded correctly.

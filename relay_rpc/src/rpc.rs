@@ -2,7 +2,10 @@
 //! clients. This also includes communication over HTTP between relays.
 
 use {
-    crate::domain::{DecodingError, DidKey, MessageId, SubscriptionId, Topic},
+    crate::{
+        domain::{DecodingError, DidKey, MessageId, SubscriptionId, Topic},
+        jwt::JwtError,
+    },
     serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::{fmt::Debug, sync::Arc},
 };
@@ -640,6 +643,27 @@ where
     *x == Default::default()
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum WatchError {
+    #[error("TTL too short")]
+    TtlTooShort,
+
+    #[error("TTL too long")]
+    TtlTooLong,
+
+    #[error("Failed to decode JWT: {0}")]
+    Jwt(#[from] JwtError),
+
+    #[error("{0}")]
+    Other(BoxError),
+}
+
+impl From<WatchError> for GenericError {
+    fn from(err: WatchError) -> Self {
+        GenericError::Request(Box::new(err))
+    }
+}
+
 /// Data structure representing watch registration request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -649,7 +673,7 @@ pub struct WatchRegister {
 }
 
 impl RequestPayload for WatchRegister {
-    type Error = GenericError;
+    type Error = WatchError;
     /// The Relay's public key.
     type Response = DidKey;
 
@@ -671,7 +695,7 @@ pub struct WatchUnregister {
 }
 
 impl RequestPayload for WatchUnregister {
-    type Error = GenericError;
+    type Error = WatchError;
     type Response = bool;
 
     fn validate(&self) -> Result<(), ValidationError> {
