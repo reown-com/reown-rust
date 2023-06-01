@@ -1,6 +1,6 @@
 use {
     self::connection::{connection_event_loop, ConnectionControl},
-    crate::{ConnectionOptions, Error},
+    crate::{error::Error, ConnectionOptions},
     relay_rpc::{
         domain::{SubscriptionId, Topic},
         rpc::{
@@ -19,9 +19,49 @@ use {
         mpsc::{self, UnboundedSender},
         oneshot,
     },
+};
+pub use {
+    fetch::*,
+    inbound::*,
+    outbound::*,
+    stream::*,
     tokio_tungstenite::tungstenite::protocol::CloseFrame,
 };
-pub use {fetch::*, inbound::*, outbound::*, stream::*};
+
+pub type TransportError = tokio_tungstenite::tungstenite::Error;
+
+#[derive(Debug, thiserror::Error)]
+pub enum WebsocketClientError {
+    #[error("Failed to connect: {0}")]
+    ConnectionFailed(TransportError),
+
+    #[error("Connection closed: {0}")]
+    ConnectionClosed(CloseReason),
+
+    #[error("Failed to close connection: {0}")]
+    ClosingFailed(TransportError),
+
+    #[error("Websocket transport error: {0}")]
+    Transport(TransportError),
+
+    #[error("Not connected")]
+    NotConnected,
+}
+
+/// Wrapper around the websocket [`CloseFrame`] providing info about the
+/// connection closing reason.
+#[derive(Debug, Clone)]
+pub struct CloseReason(pub Option<CloseFrame<'static>>);
+
+impl std::fmt::Display for CloseReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(frame) = &self.0 {
+            frame.fmt(f)
+        } else {
+            f.write_str("<close frame unavailable>")
+        }
+    }
+}
 
 mod connection;
 mod fetch;
@@ -73,7 +113,7 @@ pub trait ConnectionHandler: Send + 'static {
     fn outbound_error(&mut self, _error: Error) {}
 }
 
-/// The Relay RPC client.
+/// The Relay WebSocket RPC client.
 ///
 /// This provides the high-level access to all of the available RPC methods. For
 /// a lower-level RPC stream see [`ClientStream`](crate::client::ClientStream).
@@ -192,13 +232,13 @@ impl Client {
     }
 
     /// Opens a connection to the Relay.
-    pub async fn connect(&self, opts: ConnectionOptions) -> Result<(), Error> {
+    pub async fn connect(&self, opts: &ConnectionOptions) -> Result<(), Error> {
         let (tx, rx) = oneshot::channel();
-        let opts = Box::new(opts);
+        let request = opts.as_ws_request()?;
 
         if self
             .control_tx
-            .send(ConnectionControl::Connect { opts, tx })
+            .send(ConnectionControl::Connect { request, tx })
             .is_ok()
         {
             rx.await.map_err(|_| Error::ChannelClosed)?

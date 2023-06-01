@@ -1,11 +1,8 @@
 use {
     relay_client::{
-        Client,
-        CloseFrame,
-        ConnectionHandler,
+        error::Error,
+        websocket::{Client, CloseFrame, ConnectionHandler, PublishedMessage},
         ConnectionOptions,
-        Error,
-        PublishedMessage,
     },
     relay_rpc::{
         auth::{ed25519_dalek::Keypair, rand, AuthToken},
@@ -79,12 +76,12 @@ async fn main() -> anyhow::Result<()> {
 
     let client1 = Client::new(Handler::new("client1"));
     client1
-        .connect(create_conn_opts(&args.address, &args.project_id))
+        .connect(&create_conn_opts(&args.address, &args.project_id))
         .await?;
 
     let client2 = Client::new(Handler::new("client2"));
     client2
-        .connect(create_conn_opts(&args.address, &args.project_id))
+        .connect(&create_conn_opts(&args.address, &args.project_id))
         .await?;
 
     let topic = Topic::generate();
@@ -101,7 +98,9 @@ async fn main() -> anyhow::Result<()> {
         )
         .await?;
 
-    println!("[client2] published message with topic: {topic}");
+    println!("[client2] published message with topic: {topic}",);
+
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
     drop(client1);
     drop(client2);

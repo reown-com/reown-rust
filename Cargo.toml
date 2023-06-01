@@ -13,10 +13,8 @@ members = [
 ]
 
 [features]
-full = [
-    "client",
-    "rpc",
-]
+default = ["full"]
+full = ["client", "rpc"]
 client = ["dep:relay_client"]
 rpc = ["dep:relay_rpc"]
 
@@ -28,7 +26,12 @@ relay_rpc = { path = "./relay_rpc", optional = true }
 anyhow = "1"
 structopt = { version = "0.3", default-features = false }
 tokio = { version = "1.22", features = ["full"] }
+url = "2.3"
 
 [[example]]
-name = "basic_client"
-required-features = ["full"]
+name = "websocket_client"
+required-features = ["client","rpc","relay_client/websocket"]
+
+[[example]]
+name = "http_client"
+required-features = ["client","rpc","relay_client/http"]

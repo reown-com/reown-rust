@@ -1,6 +1,7 @@
 //! The crate exports common types used when interacting with messages between
 //! clients. This also includes communication over HTTP between relays.
 
+pub use watch::*;
 use {
     crate::{
         domain::{DecodingError, DidKey, MessageId, SubscriptionId, Topic},
@@ -645,11 +646,14 @@ where
 
 #[derive(Debug, thiserror::Error)]
 pub enum WatchError {
-    #[error("TTL too short")]
-    TtlTooShort,
+    #[error("Invalid TTL")]
+    InvalidTtl,
 
-    #[error("TTL too long")]
-    TtlTooLong,
+    #[error("Service URL is invalid or too long")]
+    InvalidServiceUrl,
+
+    #[error("Webhook URL is invalid or too long")]
+    InvalidWebhookUrl,
 
     #[error("Failed to decode JWT: {0}")]
     Jwt(#[from] JwtError),

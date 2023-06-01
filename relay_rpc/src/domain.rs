@@ -82,6 +82,12 @@ pub struct DidKey(
     #[serde(with = "crate::serde_helpers::client_id_as_did_key")] pub DecodedClientId,
 );
 
+impl From<DidKey> for PublicKey {
+    fn from(val: DidKey) -> Self {
+        val.0.as_public_key()
+    }
+}
+
 impl From<DecodedClientId> for DidKey {
     fn from(val: DecodedClientId) -> Self {
         Self(val)
@@ -115,6 +121,18 @@ impl DecodedClientId {
     #[inline]
     pub fn from_key(key: &PublicKey) -> Self {
         Self(*key.as_bytes())
+    }
+
+    #[inline]
+    pub fn as_public_key(&self) -> PublicKey {
+        // We know that the length is correct, so we can just unwrap.
+        PublicKey::from_bytes(&self.0).unwrap()
+    }
+}
+
+impl From<DecodedClientId> for PublicKey {
+    fn from(val: DecodedClientId) -> Self {
+        val.as_public_key()
     }
 }
 

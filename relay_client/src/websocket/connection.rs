@@ -2,14 +2,14 @@ use {
     super::{
         outbound::OutboundRequest,
         stream::{create_stream, ClientStream},
+        ConnectionHandler,
+        TransportError,
+        WebsocketClientError,
     },
     crate::{
-        client::stream::StreamEvent,
-        ConnectionHandler,
-        ConnectionOptions,
+        websocket::{stream::StreamEvent, PublishedMessage},
         Error,
-        PublishedMessage,
-        WsError,
+        HttpRequest,
     },
     futures_util::{stream::FusedStream, Stream, StreamExt},
     std::{
@@ -21,7 +21,7 @@ use {
 
 pub(super) enum ConnectionControl {
     Connect {
-        opts: Box<ConnectionOptions>,
+        request: HttpRequest<()>,
         tx: oneshot::Sender<Result<(), Error>>,
     },
 
@@ -45,8 +45,8 @@ pub(super) async fn connection_event_loop<T>(
             event = control_rx.recv() => {
                 match event {
                     Some(event) => match event {
-                        ConnectionControl::Connect { tx, opts } => {
-                            let result = conn.connect(*opts).await;
+                        ConnectionControl::Connect { request, tx } => {
+                            let result = conn.connect(request).await;
 
                             if result.is_ok() {
                                 handler.connected();
@@ -107,12 +107,12 @@ impl Connection {
         Self { stream: None }
     }
 
-    async fn connect(&mut self, opts: ConnectionOptions) -> Result<(), Error> {
+    async fn connect(&mut self, request: HttpRequest<()>) -> Result<(), Error> {
         if let Some(mut stream) = self.stream.take() {
             stream.close(None).await?;
         }
 
-        self.stream = Some(create_stream(opts).await?);
+        self.stream = Some(create_stream(request).await?);
 
         Ok(())
     }
@@ -123,7 +123,7 @@ impl Connection {
         match stream {
             Some(mut stream) => stream.close(None).await,
 
-            None => Err(Error::ClosingFailed(WsError::AlreadyClosed)),
+            None => Err(WebsocketClientError::ClosingFailed(TransportError::AlreadyClosed).into()),
         }
     }
 
@@ -132,7 +132,10 @@ impl Connection {
             Some(stream) => stream.send_raw(request),
 
             None => {
-                request.tx.send(Err(Error::NotConnected)).ok();
+                request
+                    .tx
+                    .send(Err(WebsocketClientError::NotConnected.into()))
+                    .ok();
             }
         }
     }
