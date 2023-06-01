@@ -1,6 +1,6 @@
 use {
     relay_client::{
-        http::{Client, WatchRegisterRequest},
+        http::{Client, WatchRegisterRequest, WatchUnregisterRequest},
         ConnectionOptions,
     },
     relay_rpc::{
@@ -49,7 +49,8 @@ async fn main() -> anyhow::Result<()> {
 
     let key1 = Keypair::generate(&mut rand::thread_rng());
     let client1 = Client::new(&create_conn_opts(&key1, &args.address, &args.project_id))?;
-    let result = client1
+
+    let relay_key: PublicKey = client1
         .watch_register(
             WatchRegisterRequest {
                 service_url: "https://example.com".to_owned(),
@@ -61,11 +62,23 @@ async fn main() -> anyhow::Result<()> {
             },
             &key1,
         )
+        .await?
+        .into();
+
+    println!("watch registered: relay_key={:?}", relay_key);
+
+    client1
+        .watch_unregister(
+            WatchUnregisterRequest {
+                service_url: "https://example.com".to_owned(),
+                webhook_url: "https://example.com/webhook".to_owned(),
+                watch_type: WatchType::Subscriber,
+            },
+            &key1,
+        )
         .await?;
 
-    let relay_key: PublicKey = result.into();
-
-    println!("relay_key: {:?}", relay_key);
+    println!("watch unregistered");
 
     Ok(())
 }

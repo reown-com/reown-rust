@@ -4,7 +4,7 @@ use {
         ConnectionOptions,
         MessageIdGenerator,
     },
-    http::HeaderMap,
+    http::{HeaderMap, StatusCode},
     relay_rpc::{
         auth::ed25519_dalek::Keypair,
         domain::DecodedClientId,
@@ -28,8 +28,8 @@ pub enum HttpClientError {
     #[error("Invalid response")]
     InvalidResponse,
 
-    #[error("Internal error")]
-    InternalError,
+    #[error("Invalid HTTP status: {}", .0.as_u16())]
+    InvalidHttpCode(StatusCode),
 
     #[error("JWT error: {0}")]
     Jwt(#[from] JwtError),
@@ -38,6 +38,7 @@ pub enum HttpClientError {
     RpcError(rpc::ErrorData),
 }
 
+#[derive(Debug, Clone)]
 pub struct WatchRegisterRequest {
     /// Service URL.
     pub service_url: String,
@@ -53,6 +54,7 @@ pub struct WatchRegisterRequest {
     pub ttl: Duration,
 }
 
+#[derive(Debug, Clone)]
 pub struct WatchUnregisterRequest {
     /// Service URL.
     pub service_url: String,
@@ -143,7 +145,7 @@ impl Client {
                 sub: request.service_url,
                 exp: Some(iat + 60 * 60),
             },
-            act: rpc::WatchAction::Register,
+            act: rpc::WatchAction::Unregister,
             typ: request.watch_type,
             whu: request.webhook_url,
         };
@@ -173,8 +175,10 @@ impl Client {
             .await
             .map_err(HttpClientError::Transport)?;
 
-        if !result.status().is_success() {
-            return Err(HttpClientError::InternalError.into());
+        let status = result.status();
+
+        if !status.is_success() {
+            return Err(HttpClientError::InvalidHttpCode(status).into());
         }
 
         let response = result

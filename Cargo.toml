@@ -30,8 +30,8 @@ url = "2.3"
 
 [[example]]
 name = "websocket_client"
-required-features = ["client","rpc","relay_client/websocket"]
+required-features = ["client","rpc"]
 
 [[example]]
 name = "http_client"
-required-features = ["client","rpc","relay_client/http"]
+required-features = ["client","rpc"]
