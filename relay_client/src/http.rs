@@ -28,7 +28,7 @@ pub enum HttpClientError {
     #[error("Invalid response")]
     InvalidResponse,
 
-    #[error("Invalid HTTP status: {}", .0.as_u16())]
+    #[error("Invalid HTTP status: {0}")]
     InvalidHttpCode(StatusCode),
 
     #[error("JWT error: {0}")]
