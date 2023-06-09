@@ -579,8 +579,25 @@ pub struct Publish {
 }
 
 impl Publish {
-    /// Creates a subscription payload for these publish params.
+    /// Converts these publish params into subscription params.
     pub fn as_subscription(
+        &self,
+        subscription_id: SubscriptionId,
+        published_at: i64,
+    ) -> Subscription {
+        Subscription {
+            id: subscription_id,
+            data: SubscriptionData {
+                topic: self.topic.clone(),
+                message: self.message.clone(),
+                published_at,
+                tag: self.tag,
+            },
+        }
+    }
+
+    /// Creates a subscription request from these publish params.
+    pub fn as_subscription_request(
         &self,
         message_id: MessageId,
         subscription_id: SubscriptionId,
@@ -589,15 +606,7 @@ impl Publish {
         Request {
             id: message_id,
             jsonrpc: JSON_RPC_VERSION.clone(),
-            params: Params::Subscription(Subscription {
-                id: subscription_id,
-                data: SubscriptionData {
-                    topic: self.topic.clone(),
-                    message: self.message.clone(),
-                    published_at,
-                    tag: self.tag,
-                },
-            }),
+            params: Params::Subscription(self.as_subscription(subscription_id, published_at)),
         }
     }
 }
