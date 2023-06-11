@@ -130,6 +130,12 @@ impl DecodedClientId {
     }
 }
 
+impl From<PublicKey> for DecodedClientId {
+    fn from(key: PublicKey) -> Self {
+        Self::from_key(&key)
+    }
+}
+
 impl From<DecodedClientId> for PublicKey {
     fn from(val: DecodedClientId) -> Self {
         val.as_public_key()

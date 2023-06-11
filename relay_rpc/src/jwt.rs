@@ -221,7 +221,7 @@ mod test {
     use {
         crate::{
             auth::AuthToken,
-            domain::{ClientId, DecodedAuthSubject},
+            domain::ClientId,
             jwt::{JwtBasicClaims, JwtError, VerifyableClaims, JWT_VALIDATION_TIME_LEEWAY_SECS},
         },
         ed25519_dalek::Keypair,
@@ -268,9 +268,10 @@ mod test {
         assert!(matches!(jwt.decode(&aud), Err(JwtError::Serialization(..))));
 
         let keypair = Keypair::generate(&mut rand::thread_rng());
+        let sub: String = "test".to_owned();
 
         // IAT in future.
-        let jwt = AuthToken::new(DecodedAuthSubject::generate())
+        let jwt = AuthToken::new(sub.clone())
             .iat(chrono::Utc::now() + chrono::Duration::hours(1))
             .as_jwt(&keypair)
             .unwrap();
@@ -280,14 +281,14 @@ mod test {
         ));
 
         // IAT leeway, valid.
-        let jwt = AuthToken::new(DecodedAuthSubject::generate())
+        let jwt = AuthToken::new(sub.clone())
             .iat(chrono::Utc::now() + chrono::Duration::seconds(JWT_VALIDATION_TIME_LEEWAY_SECS))
             .as_jwt(&keypair)
             .unwrap();
-        assert!(matches!(Jwt(jwt.into()).decode(&aud), Ok(_)));
+        assert!(Jwt(jwt.into()).decode(&aud).is_ok());
 
         // IAT leeway, invalid.
-        let jwt = AuthToken::new(DecodedAuthSubject::generate())
+        let jwt = AuthToken::new(sub.clone())
             .iat(
                 chrono::Utc::now() + chrono::Duration::seconds(JWT_VALIDATION_TIME_LEEWAY_SECS + 1),
             )
@@ -299,7 +300,7 @@ mod test {
         ));
 
         // Past expiration.
-        let jwt = AuthToken::new(DecodedAuthSubject::generate())
+        let jwt = AuthToken::new(sub.clone())
             .iat(chrono::Utc::now() - chrono::Duration::hours(2))
             .ttl(Duration::from_secs(3600))
             .as_jwt(&keypair)
@@ -310,7 +311,7 @@ mod test {
         ));
 
         // Expiration leeway, valid.
-        let jwt = AuthToken::new(DecodedAuthSubject::generate())
+        let jwt = AuthToken::new(sub.clone())
             .iat(
                 chrono::Utc::now()
                     - chrono::Duration::seconds(3600 + JWT_VALIDATION_TIME_LEEWAY_SECS),
@@ -318,10 +319,10 @@ mod test {
             .ttl(Duration::from_secs(3600))
             .as_jwt(&keypair)
             .unwrap();
-        assert!(matches!(Jwt(jwt.into()).decode(&aud), Ok(_)));
+        assert!(Jwt(jwt.into()).decode(&aud).is_ok());
 
         // Expiration leeway, invalid.
-        let jwt = AuthToken::new(DecodedAuthSubject::generate())
+        let jwt = AuthToken::new(sub.clone())
             .iat(
                 chrono::Utc::now()
                     - chrono::Duration::seconds(3600 + JWT_VALIDATION_TIME_LEEWAY_SECS + 1),
@@ -335,7 +336,7 @@ mod test {
         ));
 
         // Invalid aud.
-        let jwt = AuthToken::new(DecodedAuthSubject::generate())
+        let jwt = AuthToken::new(sub)
             .aud("wss://not.relay.walletconnect.com")
             .as_jwt(&keypair)
             .unwrap();

@@ -6,7 +6,7 @@ use {
     },
     relay_rpc::{
         auth::{ed25519_dalek::Keypair, rand, AuthToken},
-        domain::{AuthSubject, Topic},
+        domain::Topic,
     },
     std::{sync::Arc, time::Duration},
     structopt::StructOpt,
@@ -61,7 +61,7 @@ impl ConnectionHandler for Handler {
 fn create_conn_opts(address: &str, project_id: &str) -> ConnectionOptions {
     let key = Keypair::generate(&mut rand::thread_rng());
 
-    let auth = AuthToken::new(AuthSubject::generate())
+    let auth = AuthToken::new("http://example.com")
         .aud(address)
         .ttl(Duration::from_secs(60 * 60))
         .as_jwt(&key)

@@ -9,7 +9,6 @@ use {
             rand,
             AuthToken,
         },
-        domain::AuthSubject,
         rpc::{WatchStatus, WatchType},
     },
     std::time::Duration,
@@ -34,7 +33,7 @@ fn create_conn_opts(key: &Keypair, address: &str, project_id: &str) -> Connectio
         .origin()
         .unicode_serialization();
 
-    let auth = AuthToken::new(AuthSubject::generate())
+    let auth = AuthToken::new("http://example.com")
         .aud(aud)
         .ttl(Duration::from_secs(60 * 60))
         .as_jwt(key)

@@ -1,6 +1,6 @@
 use {
     crate::{
-        domain::{AuthSubject, DecodedClientId},
+        domain::DecodedClientId,
         jwt::{JwtBasicClaims, JwtHeader},
     },
     chrono::{DateTime, Utc},
@@ -50,14 +50,14 @@ impl From<SerializedAuthToken> for String {
 
 #[derive(Debug, Clone)]
 pub struct AuthToken {
-    sub: AuthSubject,
+    sub: String,
     aud: Option<String>,
     iat: Option<DateTime<Utc>>,
     ttl: Option<Duration>,
 }
 
 impl AuthToken {
-    pub fn new(sub: impl Into<AuthSubject>) -> Self {
+    pub fn new(sub: impl Into<String>) -> Self {
         Self {
             sub: sub.into(),
             aud: None,
@@ -86,7 +86,7 @@ impl AuthToken {
         let ttl = self.ttl.unwrap_or(DEFAULT_TOKEN_TTL);
         let aud = self.aud.as_deref().unwrap_or(DEFAULT_TOKEN_AUD);
 
-        encode_auth_token(key, self.sub.as_ref(), aud, iat, ttl)
+        encode_auth_token(key, &self.sub, aud, iat, ttl)
     }
 }
 

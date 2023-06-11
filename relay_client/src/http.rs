@@ -7,15 +7,17 @@ use {
     http::{HeaderMap, StatusCode},
     relay_rpc::{
         auth::ed25519_dalek::Keypair,
-        domain::DecodedClientId,
+        domain::{DecodedClientId, SubscriptionId, Topic},
         jwt::{self, JwtError, VerifyableClaims},
         rpc::{self, RequestPayload},
     },
-    std::time::Duration,
+    std::{sync::Arc, time::Duration},
     url::Url,
 };
 
 pub type TransportError = reqwest::Error;
+pub type Response<T> = Result<<T as RequestPayload>::Response, Error>;
+pub type EmptyResponse = Result<(), Error>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum HttpClientError {
@@ -95,11 +97,54 @@ impl Client {
         })
     }
 
+    /// Publishes a message over the network on given topic.
+    pub async fn publish(
+        &self,
+        topic: Topic,
+        message: impl Into<Arc<str>>,
+        tag: u32,
+        ttl: Duration,
+    ) -> EmptyResponse {
+        self.request(rpc::Publish {
+            topic,
+            message: message.into(),
+            ttl_secs: ttl.as_secs() as u32,
+            tag,
+            prompt: false,
+        })
+        .await
+        .map(|_| ())
+    }
+
+    /// Subscribes on topic to receive messages.
+    pub async fn subscribe(&self, topic: Topic) -> Response<rpc::Subscribe> {
+        self.request(rpc::Subscribe { topic }).await
+    }
+
+    /// Unsubscribes from a topic.
+    pub async fn unsubscribe(
+        &self,
+        topic: Topic,
+        subscription_id: SubscriptionId,
+    ) -> Response<rpc::Unsubscribe> {
+        self.request(rpc::Unsubscribe {
+            topic,
+            subscription_id,
+        })
+        .await
+    }
+
+    /// Fetch mailbox messages for a specific topic.
+    pub async fn fetch(&self, topic: Topic) -> Response<rpc::FetchMessages> {
+        self.request(rpc::FetchMessages { topic }).await
+    }
+
+    /// Registers a webhook to watch messages.
     pub async fn watch_register(
         &self,
         request: WatchRegisterRequest,
         keypair: &Keypair,
-    ) -> Result<<rpc::WatchRegister as RequestPayload>::Response, Error> {
+    ) -> Response<rpc::WatchRegister> {
         let iat = chrono::Utc::now().timestamp();
         let ttl_sec: i64 = request
             .ttl
@@ -130,11 +175,12 @@ impl Client {
         self.request(payload).await
     }
 
+    /// Unregisters a webhook to watch messages.
     pub async fn watch_unregister(
         &self,
         request: WatchUnregisterRequest,
         keypair: &Keypair,
-    ) -> Result<<rpc::WatchUnregister as RequestPayload>::Response, Error> {
+    ) -> Response<rpc::WatchUnregister> {
         let iat = chrono::Utc::now().timestamp();
 
         let claims = rpc::WatchUnregisterClaims {
@@ -157,7 +203,40 @@ impl Client {
         self.request(payload).await
     }
 
-    pub async fn request<T>(&self, payload: T) -> Result<T::Response, Error>
+    /// Subscribes on multiple topics to receive messages.
+    pub async fn batch_subscribe(
+        &self,
+        topics: impl Into<Vec<Topic>>,
+    ) -> Response<rpc::BatchSubscribe> {
+        self.request(rpc::BatchSubscribe {
+            topics: topics.into(),
+        })
+        .await
+    }
+
+    /// Unsubscribes from multiple topics.
+    pub async fn batch_unsubscribe(
+        &self,
+        subscriptions: impl Into<Vec<rpc::Unsubscribe>>,
+    ) -> Response<rpc::BatchUnsubscribe> {
+        self.request(rpc::BatchUnsubscribe {
+            subscriptions: subscriptions.into(),
+        })
+        .await
+    }
+
+    /// Fetch mailbox messages for multiple topics.
+    pub async fn batch_fetch(
+        &self,
+        topics: impl Into<Vec<Topic>>,
+    ) -> Response<rpc::BatchFetchMessages> {
+        self.request(rpc::BatchFetchMessages {
+            topics: topics.into(),
+        })
+        .await
+    }
+
+    pub(crate) async fn request<T>(&self, payload: T) -> Response<T>
     where
         T: RequestPayload,
     {
