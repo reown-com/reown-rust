@@ -1,17 +1,24 @@
-pub use {client::*, errors::*};
 use {
+    crate::error::{Error, RequestBuildError},
+    ::http::HeaderMap,
     relay_rpc::{
         auth::{SerializedAuthToken, RELAY_WEBSOCKET_ADDRESS},
-        domain::ProjectId,
+        domain::{MessageId, ProjectId},
         user_agent::UserAgent,
     },
     serde::Serialize,
-    tokio_tungstenite::tungstenite::{client::IntoClientRequest, http},
+    std::sync::{
+        atomic::{AtomicU8, Ordering},
+        Arc,
+    },
     url::Url,
 };
 
-mod client;
-mod errors;
+pub mod error;
+pub mod http;
+pub mod websocket;
+
+pub type HttpRequest<T> = ::http::Request<T>;
 
 /// Relay authorization method. A wrapper around [`SerializedAuthToken`].
 #[derive(Debug, Clone)]
@@ -70,49 +77,51 @@ impl ConnectionOptions {
         self
     }
 
-    fn into_request(self) -> Result<http::Request<()>, Error> {
-        let ConnectionOptions {
-            address,
-            project_id,
-            auth,
-            origin,
-            user_agent,
-        } = self;
+    pub fn as_url(&self) -> Result<Url, RequestBuildError> {
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct QueryParams<'a> {
+            project_id: &'a ProjectId,
+            auth: Option<&'a SerializedAuthToken>,
+            ua: Option<&'a UserAgent>,
+        }
 
-        let query = {
-            let auth = if let Authorization::Query(auth) = &auth {
-                Some(auth.to_owned())
+        let query = serde_qs::to_string(&QueryParams {
+            project_id: &self.project_id,
+            auth: if let Authorization::Query(auth) = &self.auth {
+                Some(auth)
             } else {
                 None
-            };
+            },
+            ua: self.user_agent.as_ref(),
+        })
+        .map_err(RequestBuildError::Query)?;
 
-            #[derive(Serialize)]
-            #[serde(rename_all = "camelCase")]
-            struct QueryParams {
-                project_id: ProjectId,
-                auth: Option<SerializedAuthToken>,
-                ua: Option<UserAgent>,
-            }
+        let mut url = Url::parse(&self.address).map_err(RequestBuildError::Url)?;
+        url.set_query(Some(&query));
 
-            let query = QueryParams {
-                project_id,
-                auth,
-                ua: user_agent,
-            };
+        Ok(url)
+    }
 
-            serde_qs::to_string(&query).map_err(RequestBuildError::Query)?
+    fn as_ws_request(&self) -> Result<HttpRequest<()>, RequestBuildError> {
+        use {
+            crate::websocket::WebsocketClientError,
+            tokio_tungstenite::tungstenite::client::IntoClientRequest,
         };
 
-        let mut url = Url::parse(&address).map_err(RequestBuildError::Url)?;
-        url.set_query(Some(&query));
+        let url = self.as_url()?;
 
         let mut request = url
             .into_client_request()
-            .map_err(RequestBuildError::Other)?;
+            .map_err(WebsocketClientError::Transport)?;
 
-        let headers = request.headers_mut();
+        self.update_request_headers(request.headers_mut())?;
 
-        if let Authorization::Header(token) = &auth {
+        Ok(request)
+    }
+
+    fn update_request_headers(&self, headers: &mut HeaderMap) -> Result<(), RequestBuildError> {
+        if let Authorization::Header(token) = &self.auth {
             let value = format!("Bearer {token}")
                 .parse()
                 .map_err(|_| RequestBuildError::Headers)?;
@@ -120,12 +129,68 @@ impl ConnectionOptions {
             headers.append("Authorization", value);
         }
 
-        if let Some(origin) = &origin {
+        if let Some(origin) = &self.origin {
             let value = origin.parse().map_err(|_| RequestBuildError::Headers)?;
 
             headers.append("Origin", value);
         }
 
-        Ok(request)
+        Ok(())
+    }
+}
+
+/// Generates unique message IDs for use in RPC requests. Uses 56 bits for the
+/// timestamp with millisecond precision, with the last 8 bits from a monotonic
+/// counter. Capable of producing up to `256000` unique values per second.
+#[derive(Debug, Clone)]
+pub struct MessageIdGenerator {
+    next: Arc<AtomicU8>,
+}
+
+impl MessageIdGenerator {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Generates a [`MessageId`].
+    pub fn next(&self) -> MessageId {
+        let next = self.next.fetch_add(1, Ordering::Relaxed) as u64;
+        let timestamp = chrono::Utc::now().timestamp_millis() as u64;
+        let id = timestamp << 8 | next;
+
+        MessageId::new(id)
+    }
+}
+
+impl Default for MessageIdGenerator {
+    fn default() -> Self {
+        Self {
+            next: Arc::new(AtomicU8::new(0)),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        std::{collections::HashSet, hash::Hash},
+    };
+
+    fn elements_unique<T>(iter: T) -> bool
+    where
+        T: IntoIterator,
+        T::Item: Eq + Hash,
+    {
+        let mut set = HashSet::new();
+        iter.into_iter().all(move |x| set.insert(x))
+    }
+
+    #[test]
+    fn unique_message_ids() {
+        let gen = MessageIdGenerator::new();
+        // N.B. We can produce up to 256 unique values within 1ms.
+        let values = (0..256).map(move |_| gen.next()).collect::<Vec<_>>();
+        assert!(elements_unique(values));
     }
 }

@@ -1,9 +1,12 @@
 use {
     super::{
         inbound::InboundRequest,
-        outbound::{create_request, MessageIdGenerator, OutboundRequest, ResponseFuture},
+        outbound::{create_request, OutboundRequest, ResponseFuture},
+        CloseReason,
+        TransportError,
+        WebsocketClientError,
     },
-    crate::{CloseReason, ConnectionOptions, Error, WsError},
+    crate::{error::Error, HttpRequest, MessageIdGenerator},
     futures_util::{stream::FusedStream, SinkExt, Stream, StreamExt},
     relay_rpc::{
         domain::MessageId,
@@ -34,10 +37,10 @@ pub type SocketStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 /// Opens a connection to the Relay and returns [`ClientStream`] for the
 /// connection.
-pub async fn create_stream(opts: ConnectionOptions) -> Result<ClientStream, Error> {
-    let (socket, _) = connect_async(opts.into_request()?)
+pub async fn create_stream(request: HttpRequest<()>) -> Result<ClientStream, WebsocketClientError> {
+    let (socket, _) = connect_async(request)
         .await
-        .map_err(Error::ConnectionFailed)?;
+        .map_err(WebsocketClientError::ConnectionFailed)?;
 
     Ok(ClientStream::new(socket))
 }
@@ -139,10 +142,13 @@ impl ClientStream {
     /// Closes the connection.
     pub async fn close(&mut self, frame: Option<CloseFrame<'static>>) -> Result<(), Error> {
         self.close_frame = frame.clone();
-        self.socket.close(frame).await.map_err(Error::ClosingFailed)
+        self.socket
+            .close(frame)
+            .await
+            .map_err(|err| WebsocketClientError::ClosingFailed(err).into())
     }
 
-    fn parse_inbound(&mut self, result: Result<Message, WsError>) -> Option<StreamEvent> {
+    fn parse_inbound(&mut self, result: Result<Message, TransportError>) -> Option<StreamEvent> {
         match result {
             Ok(message) => match &message {
                 Message::Binary(_) | Message::Text(_) => {
@@ -223,11 +229,13 @@ impl ClientStream {
                 _ => None,
             },
 
-            Err(error) => Some(StreamEvent::InboundError(Error::Socket(error))),
+            Err(error) => Some(StreamEvent::InboundError(
+                WebsocketClientError::Transport(error).into(),
+            )),
         }
     }
 
-    fn poll_write(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), WsError>> {
+    fn poll_write(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), TransportError>> {
         let mut should_flush = false;
 
         loop {
@@ -284,9 +292,9 @@ impl Stream for ClientStream {
         }
 
         match self.poll_write(cx) {
-            Poll::Ready(Err(error)) => {
-                Poll::Ready(Some(StreamEvent::OutboundError(Error::Socket(error))))
-            }
+            Poll::Ready(Err(error)) => Poll::Ready(Some(StreamEvent::OutboundError(
+                WebsocketClientError::Transport(error).into(),
+            ))),
 
             _ => Poll::Pending,
         }
@@ -304,7 +312,10 @@ impl Drop for ClientStream {
         let reason = CloseReason(self.close_frame.take());
 
         for (_, tx) in self.requests.drain() {
-            tx.send(Err(Error::ConnectionClosed(reason.clone()))).ok();
+            tx.send(Err(
+                WebsocketClientError::ConnectionClosed(reason.clone()).into()
+            ))
+            .ok();
         }
     }
 }

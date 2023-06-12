@@ -3,6 +3,8 @@
 
 pub mod auth;
 pub mod domain;
+pub mod jwt;
 pub mod macros;
 pub mod rpc;
+pub mod serde_helpers;
 pub mod user_agent;

@@ -1,14 +1,19 @@
 //! The crate exports common types used when interacting with messages between
 //! clients. This also includes communication over HTTP between relays.
 
+pub use watch::*;
 use {
-    crate::domain::{DecodingError, MessageId, SubscriptionId, Topic},
+    crate::{
+        domain::{DecodingError, DidKey, MessageId, SubscriptionId, Topic},
+        jwt::JwtError,
+    },
     serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::{fmt::Debug, sync::Arc},
 };
 
 #[cfg(test)]
 mod tests;
+pub mod watch;
 
 /// Version of the WalletConnect protocol that we're implementing.
 pub const JSON_RPC_VERSION_STR: &str = "2.0";
@@ -25,6 +30,11 @@ pub const MAX_SUBSCRIPTION_BATCH_SIZE: usize = 500;
 ///
 /// See <https://github.com/WalletConnect/walletconnect-docs/blob/main/docs/specs/servers/relay/relay-server-rpc.md>
 pub const MAX_FETCH_BATCH_SIZE: usize = 500;
+
+/// The maximum number of receipts allowed for a batch receive request.
+///
+/// See <https://github.com/WalletConnect/walletconnect-docs/blob/main/docs/specs/servers/relay/relay-server-rpc.md>
+pub const MAX_RECEIVE_BATCH_SIZE: usize = 500;
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -494,6 +504,56 @@ impl RequestPayload for BatchFetchMessages {
     }
 }
 
+/// Represents a message receipt.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Receipt {
+    /// The topic of the message to acknowledge.
+    pub topic: Topic,
+
+    /// The ID of the message to acknowledge.
+    pub message_id: MessageId,
+}
+
+/// Data structure representing publish request params.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BatchReceiveMessages {
+    /// The receipts to acknowledge.
+    pub receipts: Vec<Receipt>,
+}
+
+impl RequestPayload for BatchReceiveMessages {
+    type Error = GenericError;
+    type Response = bool;
+
+    fn validate(&self) -> Result<(), ValidationError> {
+        let batch_size = self.receipts.len();
+
+        if batch_size == 0 {
+            return Err(ValidationError::BatchEmpty);
+        }
+
+        if batch_size > MAX_RECEIVE_BATCH_SIZE {
+            return Err(ValidationError::BatchLimitExceeded {
+                limit: MAX_RECEIVE_BATCH_SIZE,
+                actual: batch_size,
+            });
+        }
+
+        for receipt in &self.receipts {
+            receipt
+                .topic
+                .decode()
+                .map_err(ValidationError::TopicDecoding)?;
+        }
+
+        Ok(())
+    }
+
+    fn into_params(self) -> Params {
+        Params::BatchReceiveMessages(self)
+    }
+}
+
 /// Data structure representing publish request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Publish {
@@ -519,8 +579,25 @@ pub struct Publish {
 }
 
 impl Publish {
-    /// Creates a subscription payload for these publish params.
+    /// Converts these publish params into subscription params.
     pub fn as_subscription(
+        &self,
+        subscription_id: SubscriptionId,
+        published_at: i64,
+    ) -> Subscription {
+        Subscription {
+            id: subscription_id,
+            data: SubscriptionData {
+                topic: self.topic.clone(),
+                message: self.message.clone(),
+                published_at,
+                tag: self.tag,
+            },
+        }
+    }
+
+    /// Creates a subscription request from these publish params.
+    pub fn as_subscription_request(
         &self,
         message_id: MessageId,
         subscription_id: SubscriptionId,
@@ -529,15 +606,7 @@ impl Publish {
         Request {
             id: message_id,
             jsonrpc: JSON_RPC_VERSION.clone(),
-            params: Params::Subscription(Subscription {
-                id: subscription_id,
-                data: SubscriptionData {
-                    topic: self.topic.clone(),
-                    message: self.message.clone(),
-                    published_at,
-                    tag: self.tag,
-                },
-            }),
+            params: Params::Subscription(self.as_subscription(subscription_id, published_at)),
         }
     }
 }
@@ -556,7 +625,7 @@ pub enum PublishError {
 
 impl From<PublishError> for GenericError {
     fn from(err: PublishError) -> Self {
-        GenericError::Request(Box::new(err))
+        Self::Request(Box::new(err))
     }
 }
 
@@ -582,6 +651,73 @@ where
     T: Default + PartialEq + 'static,
 {
     *x == Default::default()
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum WatchError {
+    #[error("Invalid TTL")]
+    InvalidTtl,
+
+    #[error("Service URL is invalid or too long")]
+    InvalidServiceUrl,
+
+    #[error("Webhook URL is invalid or too long")]
+    InvalidWebhookUrl,
+
+    #[error("Failed to decode JWT: {0}")]
+    Jwt(#[from] JwtError),
+
+    #[error("{0}")]
+    Other(BoxError),
+}
+
+impl From<WatchError> for GenericError {
+    fn from(err: WatchError) -> Self {
+        Self::Request(Box::new(err))
+    }
+}
+
+/// Data structure representing watch registration request params.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchRegister {
+    /// JWT with [`watch::WatchRegisterClaims`] payload.
+    pub register_auth: String,
+}
+
+impl RequestPayload for WatchRegister {
+    type Error = WatchError;
+    /// The Relay's public key.
+    type Response = DidKey;
+
+    fn validate(&self) -> Result<(), ValidationError> {
+        Ok(())
+    }
+
+    fn into_params(self) -> Params {
+        Params::WatchRegister(self)
+    }
+}
+
+/// Data structure representing watch unregistration request params.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchUnregister {
+    /// JWT with [`watch::WatchUnregisterClaims`] payload.
+    pub unregister_auth: String,
+}
+
+impl RequestPayload for WatchUnregister {
+    type Error = WatchError;
+    type Response = bool;
+
+    fn validate(&self) -> Result<(), ValidationError> {
+        Ok(())
+    }
+
+    fn into_params(self) -> Params {
+        Params::WatchUnregister(self)
+    }
 }
 
 /// Data structure representing subscription request params.
@@ -670,6 +806,18 @@ pub enum Params {
     #[serde(rename = "irn_publish", alias = "iridium_publish")]
     Publish(Publish),
 
+    /// Parameters to batch receive.
+    #[serde(rename = "irn_batchReceive", alias = "iridium_batchReceive")]
+    BatchReceiveMessages(BatchReceiveMessages),
+
+    /// Parameters to watch register.
+    #[serde(rename = "irn_watchRegister", alias = "iridium_watchRegister")]
+    WatchRegister(WatchRegister),
+
+    /// Parameters to watch unregister.
+    #[serde(rename = "irn_watchUnregister", alias = "iridium_watchUnregister")]
+    WatchUnregister(WatchUnregister),
+
     /// Parameters for a subscription. The messages for any given topic sent to
     /// clients are wrapped into this format. A `publish` message to a topic
     /// results in a `subscription` message to each client subscribed to the
@@ -720,6 +868,9 @@ impl Request {
             Params::BatchUnsubscribe(params) => params.validate(),
             Params::BatchFetchMessages(params) => params.validate(),
             Params::Publish(params) => params.validate(),
+            Params::BatchReceiveMessages(params) => params.validate(),
+            Params::WatchRegister(params) => params.validate(),
+            Params::WatchUnregister(params) => params.validate(),
             Params::Subscription(params) => params.validate(),
         }
     }

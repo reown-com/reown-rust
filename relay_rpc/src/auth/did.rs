@@ -3,7 +3,7 @@ pub const DID_PREFIX: &str = "did";
 pub const DID_METHOD_KEY: &str = "key";
 pub const DID_METHOD_PKH: &str = "pkh";
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum DidError {
     #[error("Invalid issuer DID prefix")]
     Prefix,
@@ -24,4 +24,8 @@ pub fn extract_did_data<'a>(did: &'a str, method: &str) -> Result<&'a str, DidEr
         .ok_or(DidError::Method)?
         .strip_prefix(DID_DELIMITER)
         .ok_or(DidError::Format)
+}
+
+pub fn combine_did_data(method: &str, data: &str) -> String {
+    format!("{DID_PREFIX}{DID_DELIMITER}{method}{DID_DELIMITER}{data}")
 }

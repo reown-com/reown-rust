@@ -1,5 +1,6 @@
 use {
-    crate::{create_request, Client, Error, ResponseFuture},
+    super::{create_request, Client, ResponseFuture},
+    crate::Error,
     futures_util::{FutureExt, Stream},
     relay_rpc::{
         domain::Topic,
