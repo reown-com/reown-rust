@@ -1,17 +1,10 @@
 use {
-    relay_client::{
-        http::{Client, WatchRegisterRequest, WatchUnregisterRequest},
-        ConnectionOptions,
-    },
+    relay_client::{http::Client, ConnectionOptions},
     relay_rpc::{
-        auth::{
-            ed25519_dalek::{Keypair, PublicKey},
-            rand,
-            AuthToken,
-        },
-        rpc::{WatchStatus, WatchType},
+        auth::{ed25519_dalek::Keypair, rand, AuthToken},
+        domain::Topic,
     },
-    std::time::Duration,
+    std::{sync::Arc, time::Duration},
     structopt::StructOpt,
     url::Url,
 };
@@ -49,35 +42,31 @@ async fn main() -> anyhow::Result<()> {
     let key1 = Keypair::generate(&mut rand::thread_rng());
     let client1 = Client::new(&create_conn_opts(&key1, &args.address, &args.project_id))?;
 
-    let relay_key: PublicKey = client1
-        .watch_register(
-            WatchRegisterRequest {
-                service_url: "https://example.com".to_owned(),
-                webhook_url: "https://example.com/webhook".to_owned(),
-                watch_type: WatchType::Subscriber,
-                tags: vec![1100],
-                statuses: vec![WatchStatus::Delivered],
-                ttl: Duration::from_secs(86400),
-            },
-            &key1,
-        )
-        .await?
-        .into();
+    let key2 = Keypair::generate(&mut rand::thread_rng());
+    let client2 = Client::new(&create_conn_opts(&key2, &args.address, &args.project_id))?;
 
-    println!("watch registered: relay_key={:?}", relay_key);
+    let topic = Topic::generate();
+    let message: Arc<str> = Arc::from("Hello WalletConnect!");
 
     client1
-        .watch_unregister(
-            WatchUnregisterRequest {
-                service_url: "https://example.com".to_owned(),
-                webhook_url: "https://example.com/webhook".to_owned(),
-                watch_type: WatchType::Subscriber,
-            },
-            &key1,
+        .publish(
+            topic.clone(),
+            message.clone(),
+            1100,
+            Duration::from_secs(30),
         )
         .await?;
 
-    println!("watch unregistered");
+    println!("[client1] published message with topic: {topic}",);
+
+    tokio::time::sleep(Duration::from_secs(1)).await;
+
+    let messages = client2.fetch(topic).await?.messages;
+    let message = messages
+        .get(0)
+        .ok_or(anyhow::anyhow!("fetch did not return any messages"))?;
+
+    println!("[client2] received message: {}", message.message);
 
     Ok(())
 }

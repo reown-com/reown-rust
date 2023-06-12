@@ -625,7 +625,7 @@ pub enum PublishError {
 
 impl From<PublishError> for GenericError {
     fn from(err: PublishError) -> Self {
-        GenericError::Request(Box::new(err))
+        Self::Request(Box::new(err))
     }
 }
 
@@ -673,7 +673,7 @@ pub enum WatchError {
 
 impl From<WatchError> for GenericError {
     fn from(err: WatchError) -> Self {
-        GenericError::Request(Box::new(err))
+        Self::Request(Box::new(err))
     }
 }
 

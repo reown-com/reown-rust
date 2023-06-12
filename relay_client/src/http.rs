@@ -20,6 +20,12 @@ pub type Response<T> = Result<<T as RequestPayload>::Response, Error>;
 pub type EmptyResponse = Result<(), Error>;
 
 #[derive(Debug, thiserror::Error)]
+pub enum RequestParamsError {
+    #[error("Invalid TTL")]
+    InvalidTtl,
+}
+
+#[derive(Debug, thiserror::Error)]
 pub enum HttpClientError {
     #[error("HTTP transport error: {0}")]
     Transport(#[from] TransportError),
@@ -105,10 +111,15 @@ impl Client {
         tag: u32,
         ttl: Duration,
     ) -> EmptyResponse {
+        let ttl_secs = ttl
+            .as_secs()
+            .try_into()
+            .map_err(|_| HttpClientError::InvalidRequest(RequestParamsError::InvalidTtl.into()))?;
+
         self.request(rpc::Publish {
             topic,
             message: message.into(),
-            ttl_secs: ttl.as_secs() as u32,
+            ttl_secs,
             tag,
             prompt: false,
         })
@@ -189,7 +200,7 @@ impl Client {
                 aud: self.origin.clone(),
                 iat,
                 sub: request.service_url,
-                exp: Some(iat + 60 * 60),
+                exp: None,
             },
             act: rpc::WatchAction::Unregister,
             typ: request.watch_type,
