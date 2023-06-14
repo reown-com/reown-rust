@@ -35,6 +35,10 @@ where
         &self.data
     }
 
+    pub fn id(&self) -> MessageId {
+        self.id
+    }
+
     /// Sends the response back to the Relay. The value is a
     /// `Result<T::Response, T::Error>` (see [`RequestPayload`] trait for
     /// details).

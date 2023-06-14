@@ -2,7 +2,7 @@ use {
     self::connection::{connection_event_loop, ConnectionControl},
     crate::{error::Error, ConnectionOptions},
     relay_rpc::{
-        domain::{SubscriptionId, Topic},
+        domain::{MessageId, SubscriptionId, Topic},
         rpc::{
             BatchFetchMessages,
             BatchReceiveMessages,
@@ -74,6 +74,7 @@ mod stream;
 /// The message received from a subscription.
 #[derive(Debug)]
 pub struct PublishedMessage {
+    pub id: MessageId,
     pub topic: Topic,
     pub message: Arc<str>,
     pub tag: u32,
@@ -87,6 +88,7 @@ impl PublishedMessage {
         let now = chrono::Utc::now();
 
         Self {
+            id: request.id(),
             topic: data.topic.clone(),
             message: data.message.clone(),
             tag: data.tag,
