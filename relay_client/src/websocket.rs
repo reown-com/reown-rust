@@ -76,6 +76,7 @@ mod stream;
 pub struct PublishedMessage {
     pub topic: Topic,
     pub message: Arc<str>,
+    pub tag: u32,
     pub published_at: chrono::DateTime<chrono::Utc>,
     pub received_at: chrono::DateTime<chrono::Utc>,
 }
@@ -88,6 +89,7 @@ impl PublishedMessage {
         Self {
             topic: data.topic.clone(),
             message: data.message.clone(),
+            tag: data.tag,
             // TODO: Set proper value once implemented.
             published_at: now,
             received_at: now,
