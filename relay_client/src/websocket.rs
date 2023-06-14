@@ -5,10 +5,12 @@ use {
         domain::{SubscriptionId, Topic},
         rpc::{
             BatchFetchMessages,
+            BatchReceiveMessages,
             BatchSubscribe,
             BatchUnsubscribe,
             FetchMessages,
             Publish,
+            Receipt,
             Subscribe,
             Subscription,
             Unsubscribe,
@@ -224,6 +226,20 @@ impl Client {
     pub fn batch_fetch(&self, topics: impl Into<Vec<Topic>>) -> ResponseFuture<BatchFetchMessages> {
         let (request, response) = create_request(BatchFetchMessages {
             topics: topics.into(),
+        });
+
+        self.request(request);
+
+        response
+    }
+
+    /// Acknowledge receipt of messages from a subscribed client.
+    pub async fn batch_receive(
+        &self,
+        receipts: impl Into<Vec<Receipt>>,
+    ) -> ResponseFuture<BatchReceiveMessages> {
+        let (request, response) = create_request(BatchReceiveMessages {
+            receipts: receipts.into(),
         });
 
         self.request(request);

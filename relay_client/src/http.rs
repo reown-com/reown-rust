@@ -9,7 +9,7 @@ use {
         auth::ed25519_dalek::Keypair,
         domain::{DecodedClientId, SubscriptionId, Topic},
         jwt::{self, JwtError, VerifyableClaims},
-        rpc::{self, RequestPayload},
+        rpc::{self, Receipt, RequestPayload},
     },
     std::{sync::Arc, time::Duration},
     url::Url,
@@ -243,6 +243,17 @@ impl Client {
     ) -> Response<rpc::BatchFetchMessages> {
         self.request(rpc::BatchFetchMessages {
             topics: topics.into(),
+        })
+        .await
+    }
+
+    /// Acknowledge receipt of messages from a subscribed client.
+    pub async fn batch_receive(
+        &self,
+        receipts: impl Into<Vec<Receipt>>,
+    ) -> Response<rpc::BatchReceiveMessages> {
+        self.request(rpc::BatchReceiveMessages {
+            receipts: receipts.into(),
         })
         .await
     }
