@@ -74,7 +74,8 @@ mod stream;
 /// The message received from a subscription.
 #[derive(Debug)]
 pub struct PublishedMessage {
-    pub id: MessageId,
+    pub message_id: MessageId,
+    pub subscription_id: SubscriptionId,
     pub topic: Topic,
     pub message: Arc<str>,
     pub tag: u32,
@@ -84,11 +85,12 @@ pub struct PublishedMessage {
 
 impl PublishedMessage {
     fn from_request(request: &InboundRequest<Subscription>) -> Self {
-        let data = &request.data().data;
+        let Subscription { id, data } = request.data();
         let now = chrono::Utc::now();
 
         Self {
-            id: request.id(),
+            message_id: request.id(),
+            subscription_id: id.clone(),
             topic: data.topic.clone(),
             message: data.message.clone(),
             tag: data.tag,
