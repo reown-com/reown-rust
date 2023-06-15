@@ -85,8 +85,6 @@ pub struct PublishedMessage {
 
 impl PublishedMessage {
     fn from_request(request: &InboundRequest<Subscription>) -> Self {
-        // let data = &request.data().data;
-        // let subscription_id = &request.data().id;
         let Subscription { id, data } = request.data();
         let now = chrono::Utc::now();
 
