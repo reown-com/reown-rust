@@ -68,6 +68,9 @@ pub enum GenericError {
     #[error("Authorization error: {0}")]
     Authorization(BoxError),
 
+    #[error("Too many requests")]
+    TooManyRequests,
+
     /// Request parameters validation failed.
     #[error("Request validation error: {0}")]
     Validation(#[from] ValidationError),
@@ -98,6 +101,7 @@ impl GenericError {
     pub fn code(&self) -> i32 {
         match self {
             Self::Authorization(_) => 3000,
+            Self::TooManyRequests => 3001,
             Self::Serialization(_) => -32700,
             Self::Validation(_) => -32602,
             Self::RequestMethod => -32601,
