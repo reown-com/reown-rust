@@ -95,6 +95,7 @@ async fn main() -> anyhow::Result<()> {
             Arc::from("Hello WalletConnect!"),
             0,
             Duration::from_secs(60),
+            false,
         )
         .await?;
 
