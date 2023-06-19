@@ -110,6 +110,7 @@ impl Client {
         message: impl Into<Arc<str>>,
         tag: u32,
         ttl: Duration,
+        prompt: bool,
     ) -> EmptyResponse {
         let ttl_secs = ttl
             .as_secs()
@@ -121,7 +122,7 @@ impl Client {
             message: message.into(),
             ttl_secs,
             tag,
-            prompt: false,
+            prompt,
         })
         .await
         .map(|_| ())

@@ -54,6 +54,7 @@ async fn main() -> anyhow::Result<()> {
             message.clone(),
             1100,
             Duration::from_secs(30),
+            false,
         )
         .await?;
 
