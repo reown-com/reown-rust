@@ -30,7 +30,6 @@ pub const MULTICODEC_ED25519_HEADER: [u8; 2] = [237, 1];
 pub const MULTICODEC_ED25519_LENGTH: usize = 32;
 
 pub const DEFAULT_TOKEN_AUD: &str = RELAY_WEBSOCKET_ADDRESS;
-pub const DEFAULT_TOKEN_TTL: Duration = Duration::from_secs(60 * 60);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -83,10 +82,9 @@ impl AuthToken {
 
     pub fn as_jwt(&self, key: &Keypair) -> Result<SerializedAuthToken, Error> {
         let iat = self.iat.unwrap_or_else(Utc::now);
-        let ttl = self.ttl.unwrap_or(DEFAULT_TOKEN_TTL);
         let aud = self.aud.as_deref().unwrap_or(DEFAULT_TOKEN_AUD);
 
-        encode_auth_token(key, &self.sub, aud, iat, ttl)
+        encode_auth_token(key, &self.sub, aud, iat, self.ttl)
     }
 }
 
@@ -95,10 +93,15 @@ pub fn encode_auth_token(
     sub: impl Into<String>,
     aud: impl Into<String>,
     iat: DateTime<Utc>,
-    ttl: Duration,
+    ttl: Option<Duration>,
 ) -> Result<SerializedAuthToken, Error> {
     let encoder = &data_encoding::BASE64URL_NOPAD;
-    let exp = iat + chrono::Duration::from_std(ttl).map_err(|_| Error::InvalidDuration)?;
+
+    let exp = ttl
+        .map(chrono::Duration::from_std)
+        .transpose()
+        .map_err(|_| Error::InvalidDuration)?
+        .map(|ttl| (iat + ttl).timestamp());
 
     let claims = {
         let data = JwtBasicClaims {
@@ -106,7 +109,7 @@ pub fn encode_auth_token(
             sub: sub.into(),
             aud: aud.into(),
             iat: iat.timestamp(),
-            exp: Some(exp.timestamp()),
+            exp,
         };
 
         encoder.encode(serde_json::to_string(&data)?.as_bytes())
