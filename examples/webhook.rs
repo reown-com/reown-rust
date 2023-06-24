@@ -128,6 +128,10 @@ async fn main() -> anyhow::Result<()> {
         &args.address,
         &args.project_id,
     ))?;
+    println!(
+        "[publisher] client id: {}",
+        DecodedClientId::from(publisher_key.public_key()).to_did_key()
+    );
 
     let subscriber_key = Keypair::generate(&mut rand::thread_rng());
     let subscriber = Client::new(&create_conn_opts(
@@ -135,6 +139,10 @@ async fn main() -> anyhow::Result<()> {
         &args.address,
         &args.project_id,
     ))?;
+    println!(
+        "[subscriber] client id: {}",
+        DecodedClientId::from(subscriber_key.public_key()).to_did_key()
+    );
 
     let topic = Topic::generate();
     let message: Arc<str> = Arc::from("Hello WalletConnect!");
