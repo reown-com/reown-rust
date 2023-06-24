@@ -110,6 +110,13 @@ impl VerifyableClaims for WatchEventClaims {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchWebhookPayload {
+    /// JWT with [`WatchEventClaims`] payload.
+    pub event_auth: String,
+}
+
 #[cfg(test)]
 mod test {
     use {

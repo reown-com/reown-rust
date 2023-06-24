@@ -27,6 +27,8 @@ anyhow = "1"
 structopt = { version = "0.3", default-features = false }
 tokio = { version = "1.22", features = ["full"] }
 url = "2.3"
+warp = { version = "0.3", default-features = false }
+serde_json = "1.0"
 
 [[example]]
 name = "websocket_client"
@@ -34,4 +36,8 @@ required-features = ["client","rpc"]
 
 [[example]]
 name = "http_client"
+required-features = ["client","rpc"]
+
+[[example]]
+name = "webhook"
 required-features = ["client","rpc"]
