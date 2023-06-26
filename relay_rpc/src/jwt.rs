@@ -26,13 +26,15 @@ pub enum JwtError {
     Expired { expiration: Option<i64> },
 
     #[error(
-        "JWT Token is not yet valid: basic.iat: {}, now + time_leeway: {}",
+        "JWT Token is not yet valid: basic.iat: {}, now + time_leeway: {}, time_leeway: {}",
         basic_iat,
-        now_time_leeway
+        now_time_leeway,
+        time_leeway,
     )]
     NotYetValid {
         basic_iat: i64,
         now_time_leeway: i64,
+        time_leeway: i64,
     },
 
     #[error("Invalid audience")]
@@ -218,6 +220,7 @@ pub trait VerifyableClaims: Serialize + DeserializeOwned {
             return Err(JwtError::NotYetValid {
                 basic_iat: basic.iat,
                 now_time_leeway: now + time_leeway,
+                time_leeway,
             });
         }
 
