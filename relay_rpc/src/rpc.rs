@@ -11,6 +11,7 @@ use {
     std::{fmt::Debug, sync::Arc},
 };
 
+pub mod msg_id;
 #[cfg(test)]
 mod tests;
 pub mod watch;

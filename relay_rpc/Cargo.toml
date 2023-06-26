@@ -22,3 +22,4 @@ once_cell = "1.16"
 jsonwebtoken = "8.1"
 k256 = { version = "0.13", optional = true }
 sha3 = { version = "0.10", optional = true }
+sha2 = { version = "0.10.6" }
