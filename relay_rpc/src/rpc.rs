@@ -681,6 +681,13 @@ impl From<WatchError> for GenericError {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchRegisterResponse {
+    /// The Relay's public key (did:key).
+    pub relay_id: DidKey,
+}
+
 /// Data structure representing watch registration request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -691,8 +698,7 @@ pub struct WatchRegister {
 
 impl RequestPayload for WatchRegister {
     type Error = WatchError;
-    /// The Relay's public key.
-    type Response = DidKey;
+    type Response = WatchRegisterResponse;
 
     fn validate(&self) -> Result<(), ValidationError> {
         Ok(())

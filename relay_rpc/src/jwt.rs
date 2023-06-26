@@ -76,6 +76,7 @@ pub struct JwtBasicClaims {
     /// Issued at, timestamp.
     pub iat: i64,
     /// Expiration, timestamp.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub exp: Option<i64>,
 }
 
