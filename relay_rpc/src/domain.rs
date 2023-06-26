@@ -2,9 +2,7 @@ use {
     crate::{
         auth::{
             did::{combine_did_data, extract_did_data, DidError, DID_METHOD_KEY},
-            MULTICODEC_ED25519_BASE,
-            MULTICODEC_ED25519_HEADER,
-            MULTICODEC_ED25519_LENGTH,
+            MULTICODEC_ED25519_BASE, MULTICODEC_ED25519_HEADER, MULTICODEC_ED25519_LENGTH,
         },
         new_type,
     },

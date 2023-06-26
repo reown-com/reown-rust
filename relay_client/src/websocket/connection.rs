@@ -2,14 +2,11 @@ use {
     super::{
         outbound::OutboundRequest,
         stream::{create_stream, ClientStream},
-        ConnectionHandler,
-        TransportError,
-        WebsocketClientError,
+        ConnectionHandler, TransportError, WebsocketClientError,
     },
     crate::{
         websocket::{stream::StreamEvent, PublishedMessage},
-        Error,
-        HttpRequest,
+        Error, HttpRequest,
     },
     futures_util::{stream::FusedStream, Stream, StreamExt},
     std::{

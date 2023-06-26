@@ -2,9 +2,7 @@ use {
     super::{
         inbound::InboundRequest,
         outbound::{create_request, OutboundRequest, ResponseFuture},
-        CloseReason,
-        TransportError,
-        WebsocketClientError,
+        CloseReason, TransportError, WebsocketClientError,
     },
     crate::{error::Error, HttpRequest, MessageIdGenerator},
     futures_util::{stream::FusedStream, SinkExt, Stream, StreamExt},
@@ -28,8 +26,7 @@ use {
     tokio_tungstenite::{
         connect_async,
         tungstenite::{protocol::CloseFrame, Message},
-        MaybeTlsStream,
-        WebSocketStream,
+        MaybeTlsStream, WebSocketStream,
     },
 };
 
