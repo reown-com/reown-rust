@@ -22,11 +22,11 @@ pub enum JwtError {
     #[error("Invalid JWT signing algorithm")]
     Header,
 
-    #[error("JWT Token is expired")]
-    Expired,
+    #[error("JWT Token is expired: {:?}", expiration)]
+    Expired { expiration: Option<i64> },
 
-    #[error("JWT Token is not yet valid")]
-    NotYetValid,
+    #[error("JWT Token is not yet valid: basic.iat: {}, now + time_leeway: {}", basic_iat, now_time_leeway)]
+    NotYetValid { basic_iat: i64, now_time_leeway: i64 },
 
     #[error("Invalid audience")]
     InvalidAudience,
@@ -202,11 +202,11 @@ pub trait VerifyableClaims: Serialize + DeserializeOwned {
         let now = Utc::now().timestamp();
 
         if matches!(basic.exp, Some(exp) if now - time_leeway > exp) {
-            return Err(JwtError::Expired);
+            return Err(JwtError::Expired { expiration: basic.exp } );
         }
 
         if now + time_leeway < basic.iat {
-            return Err(JwtError::NotYetValid);
+            return Err(JwtError::NotYetValid { basic_iat: basic.iat, now_time_leeway: now + time_leeway });
         }
 
         if !aud.contains(&basic.aud) {
