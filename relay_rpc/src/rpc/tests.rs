@@ -67,14 +67,12 @@ fn response_result() {
 
 #[test]
 fn response_error() {
-    let payload: Payload = Payload::Response(Response::Error(ErrorResponse::new(
-        1.into(),
-        ErrorData {
+    let payload: Payload =
+        Payload::Response(Response::Error(ErrorResponse::new(1.into(), ErrorData {
             code: 32,
             data: None,
             message: "some message".into(),
-        },
-    )));
+        })));
 
     let serialized = serde_json::to_string(&payload).unwrap();
 

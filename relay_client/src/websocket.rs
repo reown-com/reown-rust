@@ -4,8 +4,16 @@ use {
     relay_rpc::{
         domain::{MessageId, SubscriptionId, Topic},
         rpc::{
-            BatchFetchMessages, BatchReceiveMessages, BatchSubscribe, BatchUnsubscribe,
-            FetchMessages, Publish, Receipt, Subscribe, Subscription, Unsubscribe,
+            BatchFetchMessages,
+            BatchReceiveMessages,
+            BatchSubscribe,
+            BatchUnsubscribe,
+            FetchMessages,
+            Publish,
+            Receipt,
+            Subscribe,
+            Subscription,
+            Unsubscribe,
         },
     },
     std::{sync::Arc, time::Duration},
@@ -15,7 +23,10 @@ use {
     },
 };
 pub use {
-    fetch::*, inbound::*, outbound::*, stream::*,
+    fetch::*,
+    inbound::*,
+    outbound::*,
+    stream::*,
     tokio_tungstenite::tungstenite::protocol::CloseFrame,
 };
 
