@@ -29,7 +29,7 @@ pub enum JwtError {
         "JWT Token is not yet valid: basic.iat: {}, now + time_leeway: {}, time_leeway: {}",
         basic_iat,
         now_time_leeway,
-        time_leeway,
+        time_leeway
     )]
     NotYetValid {
         basic_iat: i64,
