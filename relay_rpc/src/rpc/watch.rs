@@ -82,6 +82,8 @@ pub struct WatchEventPayload {
     /// Topic of the message that triggered the watch event.
     pub topic: Topic,
     /// The published message.
+    pub message_id: Arc<str>,
+    /// The published message.
     pub message: Arc<str>,
     /// Message publishing timestamp.
     pub published_at: i64,
@@ -121,7 +123,11 @@ pub struct WatchWebhookPayload {
 mod test {
     use {
         super::*,
-        crate::{auth::RELAY_WEBSOCKET_ADDRESS, domain::DecodedClientId},
+        crate::{
+            auth::RELAY_WEBSOCKET_ADDRESS,
+            domain::DecodedClientId,
+            rpc::msg_id::get_message_id,
+        },
         chrono::DateTime,
         ed25519_dalek::Keypair,
     };
@@ -208,6 +214,7 @@ mod test {
         let exp = DateTime::parse_from_rfc3339("3000-01-01T00:00:00Z").unwrap();
         let topic = Topic::from("474e88153f4db893de42c35e1891dc0e37a02e11961385de0475460fb48b8639");
 
+        let message = Arc::from("test message");
         let claims = WatchEventClaims {
             basic: JwtBasicClaims {
                 iss: DecodedClientId::from_key(&key.public_key()).into(),
@@ -222,7 +229,8 @@ mod test {
             evt: WatchEventPayload {
                 status: WatchStatus::Accepted,
                 topic,
-                message: Arc::from("test message"),
+                message_id: get_message_id(&message).into(),
+                message,
                 published_at: iat.timestamp(),
                 tag: 1100,
             },
