@@ -81,7 +81,7 @@ pub struct WatchEventPayload {
     pub status: WatchStatus,
     /// Topic of the message that triggered the watch event.
     pub topic: Topic,
-    /// The published message.
+    /// The published message's ID.
     pub message_id: Arc<str>,
     /// The published message.
     pub message: Arc<str>,
