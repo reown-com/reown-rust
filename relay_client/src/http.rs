@@ -187,6 +187,14 @@ impl Client {
         self.request(payload).await
     }
 
+    /// Registers a webhook to watch messages on behalf of another client.
+    pub async fn watch_register_behalf(
+        &self,
+        register_auth: String,
+    ) -> Response<rpc::WatchRegister> {
+        self.request(rpc::WatchRegister { register_auth }).await
+    }
+
     /// Unregisters a webhook to watch messages.
     pub async fn watch_unregister(
         &self,
