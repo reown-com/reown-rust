@@ -36,8 +36,8 @@ pub enum HttpClientError {
     #[error("Invalid response")]
     InvalidResponse,
 
-    #[error("Invalid HTTP status: {0}")]
-    InvalidHttpCode(StatusCode),
+    #[error("Invalid HTTP status: {0}, body: {1}")]
+    InvalidHttpCode(StatusCode, String),
 
     #[error("JWT error: {0}")]
     Jwt(#[from] JwtError),
@@ -288,7 +288,11 @@ impl Client {
         let status = result.status();
 
         if !status.is_success() {
-            return Err(HttpClientError::InvalidHttpCode(status).into());
+            let body = match result.text().await {
+                Ok(body) => body,
+                Err(e) => format!("... error calling result.text(): {e:?}"),
+            };
+            return Err(HttpClientError::InvalidHttpCode(status, body).into());
         }
 
         let response = result
