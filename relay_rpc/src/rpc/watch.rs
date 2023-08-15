@@ -81,8 +81,6 @@ pub struct WatchEventPayload {
     pub status: WatchStatus,
     /// Topic of the message that triggered the watch event.
     pub topic: Topic,
-    /// The published message's ID.
-    pub message_id: Arc<str>,
     /// The published message.
     pub message: Arc<str>,
     /// Message publishing timestamp.
@@ -123,11 +121,7 @@ pub struct WatchWebhookPayload {
 mod test {
     use {
         super::*,
-        crate::{
-            auth::RELAY_WEBSOCKET_ADDRESS,
-            domain::DecodedClientId,
-            rpc::msg_id::get_message_id,
-        },
+        crate::{auth::RELAY_WEBSOCKET_ADDRESS, domain::DecodedClientId},
         chrono::DateTime,
         ed25519_dalek::Keypair,
     };
@@ -214,7 +208,6 @@ mod test {
         let exp = DateTime::parse_from_rfc3339("3000-01-01T00:00:00Z").unwrap();
         let topic = Topic::from("474e88153f4db893de42c35e1891dc0e37a02e11961385de0475460fb48b8639");
 
-        let message = Arc::from("test message");
         let claims = WatchEventClaims {
             basic: JwtBasicClaims {
                 iss: DecodedClientId::from_key(&key.public_key()).into(),
@@ -229,8 +222,7 @@ mod test {
             evt: WatchEventPayload {
                 status: WatchStatus::Accepted,
                 topic,
-                message_id: get_message_id(&message).into(),
-                message,
+                message: Arc::from("test message"),
                 published_at: iat.timestamp(),
                 tag: 1100,
             },
@@ -240,7 +232,7 @@ mod test {
         // lowercase.
         assert_eq!(
             serde_json::to_string(&claims).unwrap(),
-            r#"{"iss":"did:key:z6Mku3wsRZTAHjr6xrYWVUfyGeNSNz1GJRVfazp3N76AL9gE","aud":"wss://relay.walletconnect.com","sub":"https://example.com","iat":946684800,"exp":32503680000,"act":"irn_watchEvent","typ":"subscriber","whu":"https://example.com","evt":{"status":"accepted","topic":"474e88153f4db893de42c35e1891dc0e37a02e11961385de0475460fb48b8639","messageId":"3f0a377ba0a4a460ecb616f6507ce0d8cfa3e704025d4fda3ed0c5ca05468728","message":"test message","publishedAt":946684800,"tag":1100}}"#
+            r#"{"iss":"did:key:z6Mku3wsRZTAHjr6xrYWVUfyGeNSNz1GJRVfazp3N76AL9gE","aud":"wss://relay.walletconnect.com","sub":"https://example.com","iat":946684800,"exp":32503680000,"act":"irn_watchEvent","typ":"subscriber","whu":"https://example.com","evt":{"status":"accepted","topic":"474e88153f4db893de42c35e1891dc0e37a02e11961385de0475460fb48b8639","message":"test message","publishedAt":946684800,"tag":1100}}"#
         );
 
         // Verify that the claims can be encoded and decoded correctly.
