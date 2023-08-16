@@ -288,10 +288,10 @@ impl Client {
         let status = result.status();
 
         if !status.is_success() {
-            let body = match result.text().await {
-                Ok(body) => body,
-                Err(e) => format!("... error calling result.text(): {e:?}"),
-            };
+            let body = result
+                .text()
+                .await
+                .unwrap_or_else(|e| format!("error reading response body: {e:?}"));
             return Err(HttpClientError::InvalidHttpCode(status, body).into());
         }
 
