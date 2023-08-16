@@ -36,8 +36,8 @@ pub enum HttpClientError {
     #[error("Invalid response")]
     InvalidResponse,
 
-    #[error("Invalid HTTP status: {0}, body: {1}")]
-    InvalidHttpCode(StatusCode, String),
+    #[error("Invalid HTTP status: {0}, body: {1:?}")]
+    InvalidHttpCode(StatusCode, reqwest::Result<String>),
 
     #[error("JWT error: {0}")]
     Jwt(#[from] JwtError),
@@ -288,10 +288,7 @@ impl Client {
         let status = result.status();
 
         if !status.is_success() {
-            let body = result
-                .text()
-                .await
-                .unwrap_or_else(|e| format!("error reading response body: {e:?}"));
+            let body = result.text().await;
             return Err(HttpClientError::InvalidHttpCode(status, body).into());
         }
 
