@@ -36,8 +36,8 @@ pub enum HttpClientError {
     #[error("Invalid response")]
     InvalidResponse,
 
-    #[error("Invalid HTTP status: {0}")]
-    InvalidHttpCode(StatusCode),
+    #[error("Invalid HTTP status: {0}, body: {1:?}")]
+    InvalidHttpCode(StatusCode, reqwest::Result<String>),
 
     #[error("JWT error: {0}")]
     Jwt(#[from] JwtError),
@@ -187,6 +187,14 @@ impl Client {
         self.request(payload).await
     }
 
+    /// Registers a webhook to watch messages on behalf of another client.
+    pub async fn watch_register_behalf(
+        &self,
+        register_auth: String,
+    ) -> Response<rpc::WatchRegister> {
+        self.request(rpc::WatchRegister { register_auth }).await
+    }
+
     /// Unregisters a webhook to watch messages.
     pub async fn watch_unregister(
         &self,
@@ -280,7 +288,8 @@ impl Client {
         let status = result.status();
 
         if !status.is_success() {
-            return Err(HttpClientError::InvalidHttpCode(status).into());
+            let body = result.text().await;
+            return Err(HttpClientError::InvalidHttpCode(status, body).into());
         }
 
         let response = result
