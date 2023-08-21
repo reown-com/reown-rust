@@ -89,14 +89,14 @@ impl Cacao {
 
     pub fn caip122_message(&self, chain_name: &str) -> Result<String, CacaoError> {
         let mut message = format!(
-            "{} wants you to sign in with your {} account:\n{}\n",
+            "{} wants you to sign in with your {} account:\n{}\n\n",
             self.p.domain,
             chain_name,
             self.p.address()?
         );
 
         if let Some(statement) = &self.p.statement {
-            write!(message, "\n{}\n", statement)?;
+            write!(message, "{}\n", statement)?;
         }
 
         write!(
