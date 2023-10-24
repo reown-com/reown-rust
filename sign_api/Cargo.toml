@@ -30,3 +30,12 @@ url = "2.4"
 serde_json = { version = "1.0", features = ["preserve_order"] }
 
 anyhow = "1"
+clap = { version = "4.4", features = ["derive"] }
+chrono = "0.4"
+dashmap = "5.5"
+relay_client = { path = "../relay_client" }
+relay_rpc = { path = "../relay_rpc" }
+tokio = { version = "1.22", features = ["full"] }
+
+[[example]]
+name = "session"
