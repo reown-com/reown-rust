@@ -24,7 +24,7 @@ reqwest = { version = "0.11", features = ["json"] }
 
 # WebSocket client dependencies.
 tokio = { version = "1.22", features = ["rt", "time", "sync", "macros", "rt-multi-thread"] }
-tokio-tungstenite = "0.18"
+tokio-tungstenite = "0.20"
 futures-channel = "0.3"
 tokio-stream = "0.1"
 tokio-util = "0.7"
