@@ -96,7 +96,7 @@ impl Cacao {
         );
 
         if let Some(statement) = &self.p.statement {
-            write!(message, "{}\n", statement)?;
+            writeln!(message, "{}", statement)?;
         }
 
         write!(

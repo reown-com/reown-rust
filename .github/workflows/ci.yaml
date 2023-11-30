@@ -28,7 +28,7 @@ jobs:
         cargo:
           - name: "Clippy"
             cmd: clippy
-            args: --workspace --all-features --tests -- -D clippy::all -W clippy::style
+            args: --workspace --all-features --tests -- -D warnings
             rust: stable
           - name: "Formatting"
             cmd: fmt
