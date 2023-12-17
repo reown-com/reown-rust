@@ -20,7 +20,7 @@ rpc = ["dep:relay_rpc"]
 
 [dependencies]
 relay_client = { path = "./relay_client", optional = true }
-relay_rpc = { path = "./relay_rpc", optional = true, features = ["cacao"] }
+relay_rpc = { path = "./relay_rpc", optional = true }
 
 [dev-dependencies]
 anyhow = "1"
