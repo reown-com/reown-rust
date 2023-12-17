@@ -3,6 +3,8 @@ use {
     serde::{Deserialize, Serialize},
 };
 
+pub const EIP191: &str = "eip191";
+
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Hash)]
 pub struct Signature {
     pub t: String,
@@ -12,7 +14,7 @@ pub struct Signature {
 impl Signature {
     pub fn verify(&self, cacao: &Cacao) -> Result<bool, CacaoError> {
         match self.t.as_str() {
-            "eip191" => Eip191.verify(&cacao.s.s, &cacao.p.address()?, &cacao.siwe_message()?),
+            EIP191 => Eip191.verify(&cacao.s.s, &cacao.p.address()?, &cacao.siwe_message()?),
             // "eip1271" => Eip1271.verify(), TODO: How to accces our RPC?
             _ => Err(CacaoError::UnsupportedSignature),
         }

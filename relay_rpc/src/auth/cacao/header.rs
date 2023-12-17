@@ -3,6 +3,8 @@ use {
     serde::{Deserialize, Serialize},
 };
 
+pub const EIP4361: &str = "eip4361";
+
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Hash)]
 pub struct Header {
     pub t: String,
@@ -11,7 +13,7 @@ pub struct Header {
 impl Header {
     pub fn validate(&self) -> Result<(), CacaoError> {
         match self.t.as_str() {
-            "eip4361" => Ok(()),
+            EIP4361 => Ok(()),
             _ => Err(CacaoError::Header),
         }
     }
