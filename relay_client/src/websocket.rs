@@ -72,7 +72,7 @@ mod outbound;
 mod stream;
 
 /// The message received from a subscription.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PublishedMessage {
     pub message_id: MessageId,
     pub subscription_id: SubscriptionId,
