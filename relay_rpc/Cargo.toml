@@ -32,7 +32,7 @@ alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy.git", rev = "5ed60f8
 alloy-json-abi = "0.6"
 alloy-sol-types = "0.6"
 alloy-primitives = "0.6"
-url = "2.5.0"
+url = "2"
 
 [dev-dependencies]
 tokio = { version = "1.35.1", features = ["test-util", "macros"] }
