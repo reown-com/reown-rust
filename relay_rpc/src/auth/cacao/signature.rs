@@ -1,9 +1,10 @@
 use {
     super::{Cacao, CacaoError},
-    alloy_primitives::Address,
-    alloy_providers::provider::TempProvider,
+    alloy_primitives::{Address, FixedBytes},
+    alloy_providers::provider::{Provider, TempProvider},
     alloy_rpc_types::{CallInput, CallRequest},
     alloy_sol_types::{sol, SolCall},
+    alloy_transport_http::Http,
     serde::{Deserialize, Serialize},
     sha3::{Digest, Keccak256},
     std::str::FromStr,
@@ -110,14 +111,13 @@ impl Eip1271 {
         hash: &[u8; 32],
         provider: Url,
     ) -> Result<bool, CacaoError> {
-        let provider =
-            alloy_providers::provider::Provider::new(alloy_transport_http::Http::new(provider));
+        let provider = Provider::new(Http::new(provider));
 
         let call_request = CallRequest {
             to: Some(address),
             input: CallInput::new(
                 isValidSignatureCall {
-                    _hash: alloy_primitives::FixedBytes::from(hash),
+                    _hash: FixedBytes::from(hash),
                     _signature: signature,
                 }
                 .abi_encode()
