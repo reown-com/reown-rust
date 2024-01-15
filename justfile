@@ -72,6 +72,21 @@ fmt:
     echo '    ^^^^^^ To install `rustup component add rustfmt`, see https://github.com/rust-lang/rustfmt for details'
   fi
 
+fmt-imports:
+  #!/bin/bash
+  set -euo pipefail
+
+  if command -v cargo-fmt >/dev/null; then
+    echo '==> Running rustfmt'
+    cargo +nightly fmt -- --config group_imports=StdExternalCrate,imports_granularity=One
+  else
+    echo '==> rustfmt not found in PATH, skipping'
+  fi
+
+unit: lint test test-all
+
+devloop: unit fmt-imports
+
 # Run commit checker
 commit-check:
   #!/bin/bash

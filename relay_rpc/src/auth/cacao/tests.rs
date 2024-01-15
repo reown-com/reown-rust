@@ -1,8 +1,8 @@
 use crate::auth::cacao::Cacao;
 
 /// Test that we can verify a deprecated Cacao.
-#[test]
-fn cacao_verify_success() {
+#[tokio::test]
+async fn cacao_verify_success() {
     let cacao_serialized = r#"{
       "h": {
         "t": "eip4361"
@@ -24,7 +24,7 @@ fn cacao_verify_success() {
       }
     }"#;
     let cacao: Cacao = serde_json::from_str(cacao_serialized).unwrap();
-    let result = cacao.verify();
+    let result = cacao.verify(None).await;
     assert!(result.is_ok());
     assert!(result.map_err(|_| false).unwrap());
 
@@ -37,8 +37,8 @@ fn cacao_verify_success() {
 }
 
 /// Test that we can verify a updated Cacao.
-#[test]
-fn cacao_verify_success_identity_in_audience() {
+#[tokio::test]
+async fn cacao_verify_success_identity_in_audience() {
     let cacao_serialized = r#"{
         "h": {
             "t": "eip4361"
@@ -61,7 +61,7 @@ fn cacao_verify_success_identity_in_audience() {
         }
     }"#;
     let cacao: Cacao = serde_json::from_str(cacao_serialized).unwrap();
-    let result = cacao.verify();
+    let result = cacao.verify(None).await;
     assert!(result.is_ok());
     assert!(result.map_err(|_| false).unwrap());
 
@@ -74,8 +74,8 @@ fn cacao_verify_success_identity_in_audience() {
 }
 
 /// Test that we can verify a Cacao
-#[test]
-fn cacao_verify_failure() {
+#[tokio::test]
+async fn cacao_verify_failure() {
     let cacao_serialized = r#"{
       "h": {
         "t": "eip4361"
@@ -97,6 +97,6 @@ fn cacao_verify_failure() {
       }
     }"#;
     let cacao: Cacao = serde_json::from_str(cacao_serialized).unwrap();
-    let result = cacao.verify();
+    let result = cacao.verify(None).await;
     assert!(result.is_err());
 }
