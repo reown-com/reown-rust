@@ -140,6 +140,8 @@ impl Client {
 
     /// Subscribes on topic to receive messages. The request is resolved only
     /// when fully processed by the relay.
+    /// Note: This function is experimental and will likely be removed in the
+    /// future.
     pub async fn subscribe_blocking(&self, topic: Topic) -> Response<rpc::Subscribe> {
         self.request(rpc::Subscribe { topic, block: true }).await
     }
@@ -249,6 +251,8 @@ impl Client {
 
     /// Subscribes on multiple topics to receive messages. The request is
     /// resolved only when fully processed by the relay.
+    /// Note: This function is experimental and will likely be removed in the
+    /// future.
     pub async fn batch_subscribe_blocking(
         &self,
         topics: impl Into<Vec<Topic>>,

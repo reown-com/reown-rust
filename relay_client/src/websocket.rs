@@ -180,6 +180,8 @@ impl Client {
 
     /// Subscribes on topic to receive messages. The request is resolved only
     /// when fully processed by the relay.
+    /// Note: This function is experimental and will likely be removed in the
+    /// future.
     pub fn subscribe_blocking(&self, topic: Topic) -> ResponseFuture<Subscribe> {
         let (request, response) = create_request(Subscribe { topic, block: true });
 
@@ -233,6 +235,8 @@ impl Client {
 
     /// Subscribes on multiple topics to receive messages. The request is
     /// resolved only when fully processed by the relay.
+    /// Note: This function is experimental and will likely be removed in the
+    /// future.
     pub fn batch_subscribe_blocking(
         &self,
         topics: impl Into<Vec<Topic>>,
