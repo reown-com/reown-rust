@@ -165,9 +165,25 @@ impl Client {
         EmptyResponseFuture::new(response)
     }
 
-    /// Subscribes on topic to receive messages.
+    /// Subscribes on topic to receive messages. The request is resolved
+    /// optimistically as soon as the relay receives it.
     pub fn subscribe(&self, topic: Topic) -> ResponseFuture<Subscribe> {
-        let (request, response) = create_request(Subscribe { topic });
+        let (request, response) = create_request(Subscribe {
+            topic,
+            block: false,
+        });
+
+        self.request(request);
+
+        response
+    }
+
+    /// Subscribes on topic to receive messages. The request is resolved only
+    /// when fully processed by the relay.
+    /// Note: This function is experimental and will likely be removed in the
+    /// future.
+    pub fn subscribe_blocking(&self, topic: Topic) -> ResponseFuture<Subscribe> {
+        let (request, response) = create_request(Subscribe { topic, block: true });
 
         self.request(request);
 
@@ -204,10 +220,30 @@ impl Client {
         FetchMessageStream::new(self.clone(), topics.into())
     }
 
-    /// Subscribes on multiple topics to receive messages.
+    /// Subscribes on multiple topics to receive messages. The request is
+    /// resolved optimistically as soon as the relay receives it.
     pub fn batch_subscribe(&self, topics: impl Into<Vec<Topic>>) -> ResponseFuture<BatchSubscribe> {
         let (request, response) = create_request(BatchSubscribe {
             topics: topics.into(),
+            block: false,
+        });
+
+        self.request(request);
+
+        response
+    }
+
+    /// Subscribes on multiple topics to receive messages. The request is
+    /// resolved only when fully processed by the relay.
+    /// Note: This function is experimental and will likely be removed in the
+    /// future.
+    pub fn batch_subscribe_blocking(
+        &self,
+        topics: impl Into<Vec<Topic>>,
+    ) -> ResponseFuture<BatchSubscribe> {
+        let (request, response) = create_request(BatchSubscribe {
+            topics: topics.into(),
+            block: true,
         });
 
         self.request(request);

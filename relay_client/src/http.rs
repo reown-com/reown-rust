@@ -128,9 +128,22 @@ impl Client {
         .map(|_| ())
     }
 
-    /// Subscribes on topic to receive messages.
+    /// Subscribes on topic to receive messages. The request is resolved
+    /// optimistically as soon as the relay receives it.
     pub async fn subscribe(&self, topic: Topic) -> Response<rpc::Subscribe> {
-        self.request(rpc::Subscribe { topic }).await
+        self.request(rpc::Subscribe {
+            topic,
+            block: false,
+        })
+        .await
+    }
+
+    /// Subscribes on topic to receive messages. The request is resolved only
+    /// when fully processed by the relay.
+    /// Note: This function is experimental and will likely be removed in the
+    /// future.
+    pub async fn subscribe_blocking(&self, topic: Topic) -> Response<rpc::Subscribe> {
+        self.request(rpc::Subscribe { topic, block: true }).await
     }
 
     /// Unsubscribes from a topic.
@@ -223,13 +236,30 @@ impl Client {
         self.request(payload).await
     }
 
-    /// Subscribes on multiple topics to receive messages.
+    /// Subscribes on multiple topics to receive messages. The request is
+    /// resolved optimistically as soon as the relay receives it.
     pub async fn batch_subscribe(
         &self,
         topics: impl Into<Vec<Topic>>,
     ) -> Response<rpc::BatchSubscribe> {
         self.request(rpc::BatchSubscribe {
             topics: topics.into(),
+            block: false,
+        })
+        .await
+    }
+
+    /// Subscribes on multiple topics to receive messages. The request is
+    /// resolved only when fully processed by the relay.
+    /// Note: This function is experimental and will likely be removed in the
+    /// future.
+    pub async fn batch_subscribe_blocking(
+        &self,
+        topics: impl Into<Vec<Topic>>,
+    ) -> Response<rpc::BatchSubscribe> {
+        self.request(rpc::BatchSubscribe {
+            topics: topics.into(),
+            block: true,
         })
         .await
     }
