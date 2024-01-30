@@ -162,7 +162,8 @@ impl Eip1271 {
 mod test {
     use {super::*, alloy_primitives::address};
 
-    // Manual test. Paste address, signature, message, and project ID to verify function
+    // Manual test. Paste address, signature, message, and project ID to verify
+    // function
     #[tokio::test]
     #[ignore]
     async fn test_eip1271() {

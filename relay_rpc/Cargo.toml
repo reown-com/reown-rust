@@ -25,11 +25,11 @@ sha3 = { version = "0.10", optional = true }
 sha2 = { version = "0.10.6" }
 reqwest = { version = "0.11", features = ["default-tls"] }
 url = "2"
-alloy-providers = { git = "https://github.com/alloy-rs/alloy.git" }
-alloy-transport = { git = "https://github.com/alloy-rs/alloy.git" }
-alloy-transport-http = { git = "https://github.com/alloy-rs/alloy.git" }
-alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy.git" }
-alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy.git" }
+alloy-providers = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1" }
+alloy-transport = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1" }
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1" }
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1" }
+alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1" }
 alloy-json-abi = "0.6.2"
 alloy-sol-types = "0.6.2"
 alloy-primitives = "0.6.2"
