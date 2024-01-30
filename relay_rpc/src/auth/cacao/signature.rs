@@ -20,7 +20,7 @@ pub struct Signature {
     pub s: String,
 }
 
-pub type GetProvider = fn(chain_id: String) -> Option<Url>;
+pub type GetProvider = Box<dyn Fn(String) -> Option<Url>>;
 
 impl Signature {
     pub async fn verify(
