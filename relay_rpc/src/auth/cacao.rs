@@ -1,10 +1,13 @@
 use {
-    self::{header::Header, payload::Payload, signature::Signature},
+    self::{
+        header::Header,
+        payload::Payload,
+        signature::{GetProvider, Signature},
+    },
     core::fmt::Debug,
     serde::{Deserialize, Serialize},
     serde_json::value::RawValue,
     std::fmt::{Display, Write},
-    url::Url,
 };
 
 pub mod header;
@@ -28,6 +31,9 @@ pub enum CacaoError {
 
     #[error("Unsupported signature type")]
     UnsupportedSignature,
+
+    #[error("Provider not available for that chain")]
+    ProviderNotAvailable,
 
     #[error("Unable to verify")]
     Verification,
@@ -85,7 +91,7 @@ pub struct Cacao {
 impl Cacao {
     const ETHEREUM: &'static str = "Ethereum";
 
-    pub async fn verify(&self, provider: Option<Url>) -> Result<bool, CacaoError> {
+    pub async fn verify(&self, provider: GetProvider) -> Result<bool, CacaoError> {
         self.p.validate()?;
         self.h.validate()?;
         self.s.verify(self, provider).await

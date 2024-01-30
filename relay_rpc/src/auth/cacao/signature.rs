@@ -20,8 +20,14 @@ pub struct Signature {
     pub s: String,
 }
 
+pub type GetProvider = fn(chain_id: String) -> Option<Url>;
+
 impl Signature {
-    pub async fn verify(&self, cacao: &Cacao, provider: Option<Url>) -> Result<bool, CacaoError> {
+    pub async fn verify(
+        &self,
+        cacao: &Cacao,
+        get_provider: GetProvider,
+    ) -> Result<bool, CacaoError> {
         let address = cacao.p.address()?;
 
         let signature = data_encoding::HEXLOWER_PERMISSIVE
@@ -32,17 +38,23 @@ impl Signature {
 
         match self.t.as_str() {
             EIP191 => Eip191.verify(&signature, &address, hash),
-            EIP1271 if provider.is_some() => {
-                Eip1271
-                    .verify(
-                        signature,
-                        Address::from_str(&address).map_err(|_| CacaoError::AddressInvalid)?,
-                        &hash.finalize()[..]
-                            .try_into()
-                            .expect("hash length is 32 bytes"),
-                        provider.expect("provider is some"),
-                    )
-                    .await
+            EIP1271 => {
+                let chain_id = cacao.p.chain_id_reference()?;
+                let provider = get_provider(chain_id);
+                if let Some(provider) = provider {
+                    Eip1271
+                        .verify(
+                            signature,
+                            Address::from_str(&address).map_err(|_| CacaoError::AddressInvalid)?,
+                            &hash.finalize()[..]
+                                .try_into()
+                                .expect("hash length is 32 bytes"),
+                            provider,
+                        )
+                        .await
+                } else {
+                    Err(CacaoError::ProviderNotAvailable)
+                }
             }
             _ => Err(CacaoError::UnsupportedSignature),
         }
@@ -143,5 +155,33 @@ impl Eip1271 {
         } else {
             Err(CacaoError::Verification)
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use {super::*, alloy_primitives::address};
+
+    // Manual test. Paste address, signature, message, and project ID to verify function
+    #[tokio::test]
+    #[ignore]
+    async fn test_eip1271() {
+        let address = address!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        let signature = "xxx";
+        let signature = data_encoding::HEXLOWER_PERMISSIVE
+            .decode(strip_hex_prefix(signature).as_bytes())
+            .map_err(|_| CacaoError::Verification)
+            .unwrap();
+        let message = "xxx";
+        let hash = &Keccak256::new_with_prefix(eip191_bytes(message)).finalize()[..]
+            .try_into()
+            .unwrap();
+        let provider = "https://rpc.walletconnect.com/v1?chainId=eip155:1&projectId=xxx"
+            .parse()
+            .unwrap();
+        assert!(Eip1271
+            .verify(signature, address, hash, provider)
+            .await
+            .unwrap());
     }
 }
