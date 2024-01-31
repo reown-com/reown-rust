@@ -2,7 +2,7 @@ use {
     self::{
         header::Header,
         payload::Payload,
-        signature::{GetProvider, Signature},
+        signature::{GetRpcUrl, Signature},
     },
     core::fmt::Debug,
     serde::{Deserialize, Serialize},
@@ -91,7 +91,7 @@ pub struct Cacao {
 impl Cacao {
     const ETHEREUM: &'static str = "Ethereum";
 
-    pub async fn verify(&self, provider: GetProvider) -> Result<bool, CacaoError> {
+    pub async fn verify(&self, provider: &impl GetRpcUrl) -> Result<bool, CacaoError> {
         self.p.validate()?;
         self.h.validate()?;
         self.s.verify(self, provider).await

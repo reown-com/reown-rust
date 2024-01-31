@@ -20,13 +20,15 @@ pub struct Signature {
     pub s: String,
 }
 
-pub type GetProvider = Box<dyn Fn(String) -> Option<Url>>;
+pub trait GetRpcUrl {
+    fn get_rpc_url(&self, chain_id: String) -> Option<Url>;
+}
 
 impl Signature {
     pub async fn verify(
         &self,
         cacao: &Cacao,
-        get_provider: GetProvider,
+        get_provider: &impl GetRpcUrl,
     ) -> Result<bool, CacaoError> {
         let address = cacao.p.address()?;
 
@@ -40,7 +42,7 @@ impl Signature {
             EIP191 => Eip191.verify(&signature, &address, hash),
             EIP1271 => {
                 let chain_id = cacao.p.chain_id_reference()?;
-                let provider = get_provider(chain_id);
+                let provider = get_provider.get_rpc_url(chain_id);
                 if let Some(provider) = provider {
                     Eip1271
                         .verify(

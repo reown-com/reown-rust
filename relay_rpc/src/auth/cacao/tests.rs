@@ -1,4 +1,12 @@
-use crate::auth::cacao::Cacao;
+use {super::signature::GetRpcUrl, crate::auth::cacao::Cacao, url::Url};
+
+struct MockGetRpcUrl;
+
+impl GetRpcUrl for MockGetRpcUrl {
+    fn get_rpc_url(&self, _: String) -> Option<Url> {
+        None
+    }
+}
 
 /// Test that we can verify a deprecated Cacao.
 #[tokio::test]
@@ -24,7 +32,7 @@ async fn cacao_verify_success() {
       }
     }"#;
     let cacao: Cacao = serde_json::from_str(cacao_serialized).unwrap();
-    let result = cacao.verify(Box::new(|_| None)).await;
+    let result = cacao.verify(&MockGetRpcUrl).await;
     assert!(result.is_ok());
     assert!(result.map_err(|_| false).unwrap());
 
@@ -61,7 +69,7 @@ async fn cacao_verify_success_identity_in_audience() {
         }
     }"#;
     let cacao: Cacao = serde_json::from_str(cacao_serialized).unwrap();
-    let result = cacao.verify(Box::new(|_| None)).await;
+    let result = cacao.verify(&MockGetRpcUrl).await;
     assert!(result.is_ok());
     assert!(result.map_err(|_| false).unwrap());
 
@@ -97,6 +105,6 @@ async fn cacao_verify_failure() {
       }
     }"#;
     let cacao: Cacao = serde_json::from_str(cacao_serialized).unwrap();
-    let result = cacao.verify(Box::new(|_| None)).await;
+    let result = cacao.verify(&MockGetRpcUrl).await;
     assert!(result.is_err());
 }
