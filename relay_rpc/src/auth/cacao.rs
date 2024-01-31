@@ -2,7 +2,7 @@ use {
     self::{
         header::Header,
         payload::Payload,
-        signature::{GetRpcUrl, Signature},
+        signature::{eip1271::get_rpc_url::GetRpcUrl, Signature},
     },
     core::fmt::Debug,
     serde::{Deserialize, Serialize},

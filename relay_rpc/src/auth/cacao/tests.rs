@@ -1,4 +1,4 @@
-use {super::signature::GetRpcUrl, crate::auth::cacao::Cacao, url::Url};
+use {super::signature::eip1271::get_rpc_url::GetRpcUrl, crate::auth::cacao::Cacao, url::Url};
 
 struct MockGetRpcUrl;
 
