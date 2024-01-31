@@ -30,6 +30,7 @@ const SUPPORTED_CHAINS: [&str; 26] = [
     "eip155:999",
 ];
 
+#[derive(Debug, Clone)]
 pub struct BlockchainApiProvider {
     project_id: ProjectId,
 }
