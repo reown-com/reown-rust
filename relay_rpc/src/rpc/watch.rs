@@ -1,6 +1,6 @@
 use {
     crate::{
-        domain::Topic,
+        domain::{MessageId, Topic},
         jwt::{JwtBasicClaims, VerifyableClaims},
     },
     serde::{Deserialize, Serialize},
@@ -77,6 +77,8 @@ impl VerifyableClaims for WatchUnregisterClaims {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WatchEventPayload {
+    /// Message ID.
+    pub message_id: MessageId,
     /// Webhook status. Either `accepted`, `queued` or `delivered`.
     pub status: WatchStatus,
     /// Topic of the message that triggered the watch event.
@@ -220,6 +222,7 @@ mod test {
             whu: "https://example.com".to_owned(),
             typ: WatchType::Subscriber,
             evt: WatchEventPayload {
+                message_id: 12345678.into(),
                 status: WatchStatus::Accepted,
                 topic,
                 message: Arc::from("test message"),
@@ -232,7 +235,7 @@ mod test {
         // lowercase.
         assert_eq!(
             serde_json::to_string(&claims).unwrap(),
-            r#"{"iss":"did:key:z6Mku3wsRZTAHjr6xrYWVUfyGeNSNz1GJRVfazp3N76AL9gE","aud":"wss://relay.walletconnect.com","sub":"https://example.com","iat":946684800,"exp":32503680000,"act":"irn_watchEvent","typ":"subscriber","whu":"https://example.com","evt":{"status":"accepted","topic":"474e88153f4db893de42c35e1891dc0e37a02e11961385de0475460fb48b8639","message":"test message","publishedAt":946684800,"tag":1100}}"#
+            r#"{"iss":"did:key:z6Mku3wsRZTAHjr6xrYWVUfyGeNSNz1GJRVfazp3N76AL9gE","aud":"wss://relay.walletconnect.com","sub":"https://example.com","iat":946684800,"exp":32503680000,"act":"irn_watchEvent","typ":"subscriber","whu":"https://example.com","evt":{"messageId":12345678,"status":"accepted","topic":"474e88153f4db893de42c35e1891dc0e37a02e11961385de0475460fb48b8639","message":"test message","publishedAt":946684800,"tag":1100}}"#
         );
 
         // Verify that the claims can be encoded and decoded correctly.
