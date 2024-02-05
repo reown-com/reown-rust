@@ -1,7 +1,12 @@
 use {
-    self::{header::Header, payload::Payload, signature::Signature},
+    self::{
+        header::Header,
+        payload::Payload,
+        signature::{eip1271::get_rpc_url::GetRpcUrl, Signature},
+    },
     core::fmt::Debug,
     serde::{Deserialize, Serialize},
+    serde_json::value::RawValue,
     std::fmt::{Display, Write},
 };
 
@@ -21,11 +26,20 @@ pub enum CacaoError {
     #[error("Invalid payload resources")]
     PayloadResources,
 
+    #[error("Invalid address")]
+    AddressInvalid,
+
     #[error("Unsupported signature type")]
     UnsupportedSignature,
 
+    #[error("Provider not available for that chain")]
+    ProviderNotAvailable,
+
     #[error("Unable to verify")]
     Verification,
+
+    #[error("Internal EIP-1271 resolution error: {0}")]
+    Eip1271Internal(alloy_json_rpc::RpcError<alloy_transport::TransportErrorKind, Box<RawValue>>),
 }
 
 impl From<std::fmt::Error> for CacaoError {
@@ -77,10 +91,10 @@ pub struct Cacao {
 impl Cacao {
     const ETHEREUM: &'static str = "Ethereum";
 
-    pub fn verify(&self) -> Result<bool, CacaoError> {
+    pub async fn verify(&self, provider: &impl GetRpcUrl) -> Result<bool, CacaoError> {
         self.p.validate()?;
         self.h.validate()?;
-        self.s.verify(self)
+        self.s.verify(self, provider).await
     }
 
     pub fn siwe_message(&self) -> Result<String, CacaoError> {
