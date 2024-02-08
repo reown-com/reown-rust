@@ -116,7 +116,7 @@ impl VerifyableClaims for WatchEventClaims {
 #[serde(rename_all = "camelCase")]
 pub struct WatchWebhookPayload {
     /// JWT with [`WatchEventClaims`] payload.
-    pub event_auth: String,
+    pub event_auth: Vec<String>,
 }
 
 #[cfg(test)]
