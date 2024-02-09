@@ -69,8 +69,7 @@ impl Payload {
             self.chain_id_reference()?,
             Self::ISS_DELIMITER,
             self.address()?
-        )
-        .to_lowercase())
+        ))
     }
 
     pub fn identity_key(&self) -> Result<String, CacaoError> {
