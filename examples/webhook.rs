@@ -211,7 +211,8 @@ async fn main() -> anyhow::Result<()> {
     println!("[subscriber] received message: {}", message.message);
 
     let pub_data = server.recv().await;
-    let decoded = rpc::WatchEventClaims::try_from_str(&pub_data.payload.event_auth).unwrap();
+    let decoded =
+        rpc::WatchEventClaims::try_from_str(pub_data.payload.event_auth.first().unwrap()).unwrap();
     let decoded_json = serde_json::to_string_pretty(&decoded).unwrap();
     println!(
         "[webhook] publisher: url={} data={}",
@@ -219,7 +220,8 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let sub_data = server.recv().await;
-    let decoded = rpc::WatchEventClaims::try_from_str(&sub_data.payload.event_auth).unwrap();
+    let decoded =
+        rpc::WatchEventClaims::try_from_str(sub_data.payload.event_auth.first().unwrap()).unwrap();
     let decoded_json = serde_json::to_string_pretty(&decoded).unwrap();
     println!(
         "[webhook] subscriber: url={} data={}",
