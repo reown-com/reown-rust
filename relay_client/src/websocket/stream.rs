@@ -6,11 +6,11 @@ use {
         TransportError,
         WebsocketClientError,
     },
-    crate::{error::Error, HttpRequest, MessageIdGenerator},
+    crate::{error::ClientError, HttpRequest, MessageIdGenerator},
     futures_util::{stream::FusedStream, SinkExt, Stream, StreamExt},
     relay_rpc::{
         domain::MessageId,
-        rpc::{Params, Payload, Request, RequestPayload, Response, Subscription},
+        rpc::{self, Params, Payload, Response, ServiceRequest, Subscription},
     },
     std::{
         collections::{hash_map::Entry, HashMap},
@@ -58,11 +58,11 @@ pub enum StreamEvent {
 
     /// Error generated when failed to parse an inbound message, invalid request
     /// type or message ID.
-    InboundError(Error),
+    InboundError(ClientError),
 
     /// Error generated when failed to write data to the underlying websocket
     /// stream.
-    OutboundError(Error),
+    OutboundError(ClientError),
 
     /// The websocket connection was closed.
     ///
@@ -81,7 +81,7 @@ pub struct ClientStream {
     socket: SocketStream,
     outbound_tx: UnboundedSender<Message>,
     outbound_rx: UnboundedReceiver<Message>,
-    requests: HashMap<MessageId, oneshot::Sender<Result<serde_json::Value, Error>>>,
+    requests: HashMap<MessageId, oneshot::Sender<Result<serde_json::Value, ClientError>>>,
     id_generator: MessageIdGenerator,
     close_frame: Option<CloseFrame<'static>>,
 }
@@ -107,13 +107,13 @@ impl ClientStream {
     pub fn send_raw(&mut self, request: OutboundRequest) {
         let tx = request.tx;
         let id = self.id_generator.next();
-        let request = Payload::Request(Request::new(id, request.params));
+        let request = Payload::Request(rpc::Request::new(id, request.params));
         let serialized = serde_json::to_string(&request);
 
         match serialized {
             Ok(data) => match self.requests.entry(id) {
                 Entry::Occupied(_) => {
-                    tx.send(Err(Error::DuplicateRequestId)).ok();
+                    tx.send(Err(ClientError::DuplicateRequestId)).ok();
                 }
 
                 Entry::Vacant(entry) => {
@@ -123,7 +123,7 @@ impl ClientStream {
             },
 
             Err(err) => {
-                tx.send(Err(Error::Serialization(err))).ok();
+                tx.send(Err(ClientError::Serialization(err))).ok();
             }
         }
     }
@@ -132,7 +132,7 @@ impl ClientStream {
     /// returning a future that resolves with the response.
     pub fn send<T>(&mut self, request: T) -> ResponseFuture<T>
     where
-        T: RequestPayload,
+        T: ServiceRequest,
     {
         let (request, response) = create_request(request);
         self.send_raw(request);
@@ -140,7 +140,7 @@ impl ClientStream {
     }
 
     /// Closes the connection.
-    pub async fn close(&mut self, frame: Option<CloseFrame<'static>>) -> Result<(), Error> {
+    pub async fn close(&mut self, frame: Option<CloseFrame<'static>>) -> Result<(), ClientError> {
         self.close_frame = frame.clone();
         self.socket
             .close(frame)
@@ -156,7 +156,9 @@ impl ClientStream {
                         Ok(payload) => payload,
 
                         Err(err) => {
-                            return Some(StreamEvent::InboundError(Error::Deserialization(err)))
+                            return Some(StreamEvent::InboundError(ClientError::Deserialization(
+                                err,
+                            )))
                         }
                     };
 
@@ -172,7 +174,7 @@ impl ClientStream {
                                         )
                                     }
 
-                                    _ => StreamEvent::InboundError(Error::InvalidRequestType),
+                                    _ => StreamEvent::InboundError(ClientError::InvalidRequestType),
                                 };
 
                             Some(event)
@@ -183,25 +185,21 @@ impl ClientStream {
 
                             if id.is_zero() {
                                 return match response {
-                                    Response::Error(response) => {
-                                        Some(StreamEvent::InboundError(Error::Rpc {
-                                            code: response.error.code,
-                                            message: response.error.message,
-                                        }))
-                                    }
+                                    Response::Error(response) => Some(StreamEvent::InboundError(
+                                        ClientError::from(response.error),
+                                    )),
 
-                                    Response::Success(_) => {
-                                        Some(StreamEvent::InboundError(Error::InvalidResponseId))
-                                    }
+                                    Response::Success(_) => Some(StreamEvent::InboundError(
+                                        ClientError::InvalidResponseId,
+                                    )),
                                 };
                             }
 
                             if let Some(tx) = self.requests.remove(&id) {
                                 let result = match response {
-                                    Response::Error(response) => Err(Error::Rpc {
-                                        code: response.error.code,
-                                        message: response.error.message,
-                                    }),
+                                    Response::Error(response) => {
+                                        Err(ClientError::from(response.error))
+                                    }
 
                                     Response::Success(response) => Ok(response.result),
                                 };
@@ -215,7 +213,7 @@ impl ClientStream {
 
                                 None
                             } else {
-                                Some(StreamEvent::InboundError(Error::InvalidResponseId))
+                                Some(StreamEvent::InboundError(ClientError::InvalidResponseId))
                             }
                         }
                     }

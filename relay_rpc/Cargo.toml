@@ -52,6 +52,7 @@ alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1
 alloy-json-abi = { version = "0.6.2", optional = true }
 alloy-sol-types = { version = "0.6.2", optional = true }
 alloy-primitives = { version = "0.6.2", optional = true }
+strum = { version = "0.26", features = ["strum_macros", "derive"] }
 
 [dev-dependencies]
 tokio = { version = "1.35.1", features = ["test-util", "macros"] }

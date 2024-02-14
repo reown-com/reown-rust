@@ -1,6 +1,6 @@
 use {
     self::connection::{connection_event_loop, ConnectionControl},
-    crate::{error::Error, ConnectionOptions},
+    crate::{error::ClientError, ConnectionOptions},
     relay_rpc::{
         domain::{MessageId, SubscriptionId, Topic},
         rpc::{
@@ -114,11 +114,11 @@ pub trait ConnectionHandler: Send + 'static {
 
     /// Called when an inbound error occurs, such as data deserialization
     /// failure, or an unknown response message ID.
-    fn inbound_error(&mut self, _error: Error) {}
+    fn inbound_error(&mut self, _error: ClientError) {}
 
     /// Called when an outbound error occurs, i.e. failed to write to the
     /// websocket stream.
-    fn outbound_error(&mut self, _error: Error) {}
+    fn outbound_error(&mut self, _error: ClientError) {}
 }
 
 /// The Relay WebSocket RPC client.
@@ -291,7 +291,7 @@ impl Client {
     }
 
     /// Opens a connection to the Relay.
-    pub async fn connect(&self, opts: &ConnectionOptions) -> Result<(), Error> {
+    pub async fn connect(&self, opts: &ConnectionOptions) -> Result<(), ClientError> {
         let (tx, rx) = oneshot::channel();
         let request = opts.as_ws_request()?;
 
@@ -300,14 +300,14 @@ impl Client {
             .send(ConnectionControl::Connect { request, tx })
             .is_ok()
         {
-            rx.await.map_err(|_| Error::ChannelClosed)?
+            rx.await.map_err(|_| ClientError::ChannelClosed)?
         } else {
-            Err(Error::ChannelClosed)
+            Err(ClientError::ChannelClosed)
         }
     }
 
     /// Closes the Relay connection.
-    pub async fn disconnect(&self) -> Result<(), Error> {
+    pub async fn disconnect(&self) -> Result<(), ClientError> {
         let (tx, rx) = oneshot::channel();
 
         if self
@@ -315,9 +315,9 @@ impl Client {
             .send(ConnectionControl::Disconnect { tx })
             .is_ok()
         {
-            rx.await.map_err(|_| Error::ChannelClosed)?
+            rx.await.map_err(|_| ClientError::ChannelClosed)?
         } else {
-            Err(Error::ChannelClosed)
+            Err(ClientError::ChannelClosed)
         }
     }
 
@@ -330,7 +330,7 @@ impl Client {
                 unreachable!();
             };
 
-            request.tx.send(Err(Error::ChannelClosed)).ok();
+            request.tx.send(Err(ClientError::ChannelClosed)).ok();
         }
     }
 }

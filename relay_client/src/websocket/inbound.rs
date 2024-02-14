@@ -1,8 +1,8 @@
 use {
-    crate::Error,
+    crate::ClientError,
     relay_rpc::{
         domain::MessageId,
-        rpc::{ErrorResponse, Payload, RequestPayload, Response, SuccessfulResponse},
+        rpc::{self, ErrorResponse, Payload, Response, ServiceRequest, SuccessfulResponse},
     },
     tokio::sync::mpsc::UnboundedSender,
     tokio_tungstenite::tungstenite::Message,
@@ -24,7 +24,7 @@ pub struct InboundRequest<T> {
 
 impl<T> InboundRequest<T>
 where
-    T: RequestPayload,
+    T: ServiceRequest,
 {
     pub(super) fn new(id: MessageId, data: T, tx: UnboundedSender<Message>) -> Self {
         Self { id, tx, data }
@@ -45,20 +45,23 @@ where
     ///
     /// Returns an error if the response can't be serialized, or if the
     /// underlying channel is closed.
-    pub fn respond(self, response: Result<T::Response, T::Error>) -> Result<(), Error> {
+    pub fn respond(self, response: Result<T::Response, T::Error>) -> Result<(), ClientError> {
         let response = match response {
             Ok(data) => Response::Success(SuccessfulResponse::new(
                 self.id,
-                serde_json::to_value(data).map_err(Error::Serialization)?,
+                serde_json::to_value(data).map_err(ClientError::Serialization)?,
             )),
 
-            Err(err) => Response::Error(ErrorResponse::new(self.id, err.into())),
+            Err(err) => Response::Error(ErrorResponse::new(self.id, rpc::Error::Handler(err))),
         };
 
         let message = Message::Text(
-            serde_json::to_string(&Payload::Response(response)).map_err(Error::Serialization)?,
+            serde_json::to_string(&Payload::Response(response))
+                .map_err(ClientError::Serialization)?,
         );
 
-        self.tx.send(message).map_err(|_| Error::ChannelClosed)
+        self.tx
+            .send(message)
+            .map_err(|_| ClientError::ChannelClosed)
     }
 }

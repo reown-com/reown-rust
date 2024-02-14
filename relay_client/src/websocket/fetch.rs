@@ -1,10 +1,10 @@
 use {
     super::{create_request, Client, ResponseFuture},
-    crate::Error,
+    crate::error::Error,
     futures_util::{FutureExt, Stream},
     relay_rpc::{
         domain::Topic,
-        rpc::{BatchFetchMessages, SubscriptionData},
+        rpc::{BatchFetchMessages, ServiceRequest, SubscriptionData},
     },
     std::{
         pin::Pin,
@@ -48,7 +48,7 @@ impl FetchMessageStream {
 }
 
 impl Stream for FetchMessageStream {
-    type Item = Result<SubscriptionData, Error>;
+    type Item = Result<SubscriptionData, Error<<BatchFetchMessages as ServiceRequest>::Error>>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {

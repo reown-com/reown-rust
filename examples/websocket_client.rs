@@ -1,6 +1,6 @@
 use {
     relay_client::{
-        error::Error,
+        error::ClientError,
         websocket::{Client, CloseFrame, ConnectionHandler, PublishedMessage},
         ConnectionOptions,
     },
@@ -49,11 +49,11 @@ impl ConnectionHandler for Handler {
         );
     }
 
-    fn inbound_error(&mut self, error: Error) {
+    fn inbound_error(&mut self, error: ClientError) {
         println!("[{}] inbound error: {error}", self.name);
     }
 
-    fn outbound_error(&mut self, error: Error) {
+    fn outbound_error(&mut self, error: ClientError) {
         println!("[{}] outbound error: {error}", self.name);
     }
 }

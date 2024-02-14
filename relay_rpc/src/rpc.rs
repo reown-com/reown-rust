@@ -1,16 +1,14 @@
 //! The crate exports common types used when interacting with messages between
 //! clients. This also includes communication over HTTP between relays.
 
-pub use watch::*;
 use {
-    crate::{
-        domain::{DecodingError, DidKey, MessageId, SubscriptionId, Topic},
-        jwt::JwtError,
-    },
+    crate::domain::{DidKey, MessageId, SubscriptionId, Topic},
     serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::{fmt::Debug, sync::Arc},
 };
+pub use {error::*, watch::*};
 
+pub mod error;
 pub mod msg_id;
 #[cfg(test)]
 mod tests;
@@ -37,96 +35,6 @@ pub const MAX_FETCH_BATCH_SIZE: usize = 500;
 /// See <https://github.com/WalletConnect/walletconnect-docs/blob/main/docs/specs/servers/relay/relay-server-rpc.md>
 pub const MAX_RECEIVE_BATCH_SIZE: usize = 500;
 
-type BoxError = Box<dyn std::error::Error + Send + Sync>;
-
-/// Errors covering payload validation problems.
-#[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
-pub enum ValidationError {
-    #[error("Topic decoding failed: {0}")]
-    TopicDecoding(DecodingError),
-
-    #[error("Subscription ID decoding failed: {0}")]
-    SubscriptionIdDecoding(DecodingError),
-
-    #[error("Invalid request ID")]
-    RequestId,
-
-    #[error("Invalid JSON RPC version")]
-    JsonRpcVersion,
-
-    #[error("The batch contains too many items ({actual}). Maximum number of items is {limit}")]
-    BatchLimitExceeded { limit: usize, actual: usize },
-
-    #[error("The batch contains no items")]
-    BatchEmpty,
-}
-
-/// Errors caught while processing the request. These are meant to be serialized
-/// into [`ErrorResponse`], and should be specific enough for the clients to
-/// make sense of the problem.
-#[derive(Debug, thiserror::Error)]
-pub enum GenericError {
-    #[error("Authorization error: {0}")]
-    Authorization(BoxError),
-
-    #[error("Too many requests")]
-    TooManyRequests,
-
-    /// Request parameters validation failed.
-    #[error("Request validation error: {0}")]
-    Validation(#[from] ValidationError),
-
-    /// Request/response serialization error.
-    #[error("Serialization failed: {0}")]
-    Serialization(#[from] serde_json::Error),
-
-    /// An unsupported JSON RPC method.
-    #[error("Unsupported request method")]
-    RequestMethod,
-
-    /// Generic request-specific error, which could not be caught by the request
-    /// validation.
-    #[error("Failed to process request: {0}")]
-    Request(BoxError),
-
-    /// Internal server error. These are not request-specific, but should not
-    /// normally happen if the relay is fully operational.
-    #[error("Internal error: {0}")]
-    Other(BoxError),
-}
-
-impl GenericError {
-    /// The error code. These are the standard JSONRPC error codes. The Relay
-    /// specific errors are in 3000-4999 range to align with the websocket close
-    /// codes.
-    pub fn code(&self) -> i32 {
-        match self {
-            Self::Authorization(_) => 3000,
-            Self::TooManyRequests => 3001,
-            Self::Serialization(_) => -32700,
-            Self::Validation(_) => -32602,
-            Self::RequestMethod => -32601,
-            Self::Request(_) => -32000,
-            Self::Other(_) => -32603,
-        }
-    }
-}
-
-impl<T> From<T> for ErrorData
-where
-    T: Into<GenericError>,
-{
-    fn from(value: T) -> Self {
-        let value = value.into();
-
-        ErrorData {
-            code: value.code(),
-            message: value.to_string(),
-            data: None,
-        }
-    }
-}
-
 pub trait Serializable:
     Debug + Clone + PartialEq + Eq + Serialize + DeserializeOwned + Send + Sync + 'static
 {
@@ -138,15 +46,15 @@ impl<T> Serializable for T where
 
 /// Trait that adds validation capabilities and strong typing to errors and
 /// successful responses. Implemented for all possible RPC request types.
-pub trait RequestPayload: Serializable {
+pub trait ServiceRequest: Serializable {
     /// The error representing a failed request.
-    type Error: Into<ErrorData> + Send + 'static;
+    type Error: ServiceError;
 
     /// The type of a successful response.
     type Response: Serializable;
 
     /// Validates the request parameters.
-    fn validate(&self) -> Result<(), ValidationError> {
+    fn validate(&self) -> Result<(), PayloadError> {
         Ok(())
     }
 
@@ -174,7 +82,7 @@ impl Payload {
         }
     }
 
-    pub fn validate(&self) -> Result<(), ValidationError> {
+    pub fn validate(&self) -> Result<(), PayloadError> {
         match self {
             Self::Request(request) => request.validate(),
             Self::Response(response) => response.validate(),
@@ -211,7 +119,7 @@ impl Response {
     }
 
     /// Validates the response parameters.
-    pub fn validate(&self) -> Result<(), ValidationError> {
+    pub fn validate(&self) -> Result<(), PayloadError> {
         match self {
             Self::Success(response) => response.validate(),
             Self::Error(response) => response.validate(),
@@ -243,9 +151,9 @@ impl SuccessfulResponse {
     }
 
     /// Validates the parameters.
-    pub fn validate(&self) -> Result<(), ValidationError> {
+    pub fn validate(&self) -> Result<(), PayloadError> {
         if self.jsonrpc.as_ref() != JSON_RPC_VERSION_STR {
-            Err(ValidationError::JsonRpcVersion)
+            Err(PayloadError::InvalidJsonRpcVersion)
         } else {
             // We can't really validate `serde_json::Value` without knowing the expected
             // value type.
@@ -269,18 +177,18 @@ pub struct ErrorResponse {
 
 impl ErrorResponse {
     /// Create a new instance.
-    pub fn new(id: MessageId, error: ErrorData) -> Self {
+    pub fn new(id: MessageId, error: impl Into<ErrorData>) -> Self {
         Self {
             id,
             jsonrpc: JSON_RPC_VERSION.clone(),
-            error,
+            error: error.into(),
         }
     }
 
     /// Validates the parameters.
-    pub fn validate(&self) -> Result<(), ValidationError> {
+    pub fn validate(&self) -> Result<(), PayloadError> {
         if self.jsonrpc.as_ref() != JSON_RPC_VERSION_STR {
-            Err(ValidationError::JsonRpcVersion)
+            Err(PayloadError::InvalidJsonRpcVersion)
         } else {
             Ok(())
         }
@@ -301,6 +209,12 @@ pub struct ErrorData {
     pub data: Option<String>,
 }
 
+#[derive(Debug, thiserror::Error, strum::EnumString, strum::IntoStaticStr, PartialEq, Eq)]
+pub enum SubscriptionError {
+    #[error("Subscriber limit exceeded")]
+    SubscriberLimitExceeded,
+}
+
 /// Data structure representing subscribe request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Subscribe {
@@ -313,14 +227,14 @@ pub struct Subscribe {
     pub block: bool,
 }
 
-impl RequestPayload for Subscribe {
-    type Error = GenericError;
+impl ServiceRequest for Subscribe {
+    type Error = SubscriptionError;
     type Response = SubscriptionId;
 
-    fn validate(&self) -> Result<(), ValidationError> {
+    fn validate(&self) -> Result<(), PayloadError> {
         self.topic
             .decode()
-            .map_err(ValidationError::TopicDecoding)?;
+            .map_err(|_| PayloadError::InvalidTopic)?;
 
         Ok(())
     }
@@ -341,14 +255,14 @@ pub struct Unsubscribe {
     pub subscription_id: SubscriptionId,
 }
 
-impl RequestPayload for Unsubscribe {
-    type Error = GenericError;
+impl ServiceRequest for Unsubscribe {
+    type Error = SubscriptionError;
     type Response = bool;
 
-    fn validate(&self) -> Result<(), ValidationError> {
+    fn validate(&self) -> Result<(), PayloadError> {
         self.topic
             .decode()
-            .map_err(ValidationError::TopicDecoding)?;
+            .map_err(|_| PayloadError::InvalidTopic)?;
 
         // FIXME: Subscription ID validation is currently disabled, since SDKs do not
         // use the actual IDs generated by the relay, and instead send some randomized
@@ -374,14 +288,14 @@ pub struct FetchMessages {
     pub topic: Topic,
 }
 
-impl RequestPayload for FetchMessages {
+impl ServiceRequest for FetchMessages {
     type Error = GenericError;
     type Response = FetchResponse;
 
-    fn validate(&self) -> Result<(), ValidationError> {
+    fn validate(&self) -> Result<(), PayloadError> {
         self.topic
             .decode()
-            .map_err(ValidationError::TopicDecoding)?;
+            .map_err(|_| PayloadError::InvalidTopic)?;
 
         Ok(())
     }
@@ -415,26 +329,23 @@ pub struct BatchSubscribe {
     pub block: bool,
 }
 
-impl RequestPayload for BatchSubscribe {
-    type Error = GenericError;
+impl ServiceRequest for BatchSubscribe {
+    type Error = SubscriptionError;
     type Response = Vec<SubscriptionId>;
 
-    fn validate(&self) -> Result<(), ValidationError> {
+    fn validate(&self) -> Result<(), PayloadError> {
         let batch_size = self.topics.len();
 
         if batch_size == 0 {
-            return Err(ValidationError::BatchEmpty);
+            return Err(PayloadError::BatchEmpty);
         }
 
         if batch_size > MAX_SUBSCRIPTION_BATCH_SIZE {
-            return Err(ValidationError::BatchLimitExceeded {
-                limit: MAX_SUBSCRIPTION_BATCH_SIZE,
-                actual: batch_size,
-            });
+            return Err(PayloadError::BatchLimitExceeded);
         }
 
         for topic in &self.topics {
-            topic.decode().map_err(ValidationError::TopicDecoding)?;
+            topic.decode().map_err(|_| PayloadError::InvalidTopic)?;
         }
 
         Ok(())
@@ -452,22 +363,19 @@ pub struct BatchUnsubscribe {
     pub subscriptions: Vec<Unsubscribe>,
 }
 
-impl RequestPayload for BatchUnsubscribe {
-    type Error = GenericError;
+impl ServiceRequest for BatchUnsubscribe {
+    type Error = SubscriptionError;
     type Response = bool;
 
-    fn validate(&self) -> Result<(), ValidationError> {
+    fn validate(&self) -> Result<(), PayloadError> {
         let batch_size = self.subscriptions.len();
 
         if batch_size == 0 {
-            return Err(ValidationError::BatchEmpty);
+            return Err(PayloadError::BatchEmpty);
         }
 
         if batch_size > MAX_SUBSCRIPTION_BATCH_SIZE {
-            return Err(ValidationError::BatchLimitExceeded {
-                limit: MAX_SUBSCRIPTION_BATCH_SIZE,
-                actual: batch_size,
-            });
+            return Err(PayloadError::BatchLimitExceeded);
         }
 
         for sub in &self.subscriptions {
@@ -489,26 +397,23 @@ pub struct BatchFetchMessages {
     pub topics: Vec<Topic>,
 }
 
-impl RequestPayload for BatchFetchMessages {
+impl ServiceRequest for BatchFetchMessages {
     type Error = GenericError;
     type Response = FetchResponse;
 
-    fn validate(&self) -> Result<(), ValidationError> {
+    fn validate(&self) -> Result<(), PayloadError> {
         let batch_size = self.topics.len();
 
         if batch_size == 0 {
-            return Err(ValidationError::BatchEmpty);
+            return Err(PayloadError::BatchEmpty);
         }
 
         if batch_size > MAX_FETCH_BATCH_SIZE {
-            return Err(ValidationError::BatchLimitExceeded {
-                limit: MAX_FETCH_BATCH_SIZE,
-                actual: batch_size,
-            });
+            return Err(PayloadError::BatchLimitExceeded);
         }
 
         for topic in &self.topics {
-            topic.decode().map_err(ValidationError::TopicDecoding)?;
+            topic.decode().map_err(|_| PayloadError::InvalidTopic)?;
         }
 
         Ok(())
@@ -536,29 +441,26 @@ pub struct BatchReceiveMessages {
     pub receipts: Vec<Receipt>,
 }
 
-impl RequestPayload for BatchReceiveMessages {
+impl ServiceRequest for BatchReceiveMessages {
     type Error = GenericError;
     type Response = bool;
 
-    fn validate(&self) -> Result<(), ValidationError> {
+    fn validate(&self) -> Result<(), PayloadError> {
         let batch_size = self.receipts.len();
 
         if batch_size == 0 {
-            return Err(ValidationError::BatchEmpty);
+            return Err(PayloadError::BatchEmpty);
         }
 
         if batch_size > MAX_RECEIVE_BATCH_SIZE {
-            return Err(ValidationError::BatchLimitExceeded {
-                limit: MAX_RECEIVE_BATCH_SIZE,
-                actual: batch_size,
-            });
+            return Err(PayloadError::BatchLimitExceeded);
         }
 
         for receipt in &self.receipts {
             receipt
                 .topic
                 .decode()
-                .map_err(ValidationError::TopicDecoding)?;
+                .map_err(|_| PayloadError::InvalidTopic)?;
         }
 
         Ok(())
@@ -626,32 +528,23 @@ impl Publish {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, strum::EnumString, strum::IntoStaticStr, PartialEq, Eq)]
 pub enum PublishError {
     #[error("TTL too short")]
     TtlTooShort,
 
     #[error("TTL too long")]
     TtlTooLong,
-
-    #[error("{0}")]
-    Other(BoxError),
 }
 
-impl From<PublishError> for GenericError {
-    fn from(err: PublishError) -> Self {
-        Self::Request(Box::new(err))
-    }
-}
-
-impl RequestPayload for Publish {
+impl ServiceRequest for Publish {
     type Error = PublishError;
     type Response = bool;
 
-    fn validate(&self) -> Result<(), ValidationError> {
+    fn validate(&self) -> Result<(), PayloadError> {
         self.topic
             .decode()
-            .map_err(ValidationError::TopicDecoding)?;
+            .map_err(|_| PayloadError::InvalidTopic)?;
 
         Ok(())
     }
@@ -668,7 +561,13 @@ where
     *x == Default::default()
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, strum::EnumString, strum::IntoStaticStr, PartialEq, Eq)]
+pub enum GenericError {
+    #[error("Unknown error")]
+    Unknown,
+}
+
+#[derive(Debug, thiserror::Error, strum::EnumString, strum::IntoStaticStr, PartialEq, Eq)]
 pub enum WatchError {
     #[error("Invalid TTL")]
     InvalidTtl,
@@ -679,17 +578,11 @@ pub enum WatchError {
     #[error("Webhook URL is invalid or too long")]
     InvalidWebhookUrl,
 
-    #[error("Failed to decode JWT: {0}")]
-    Jwt(#[from] JwtError),
+    #[error("Invalid action")]
+    InvalidAction,
 
-    #[error("{0}")]
-    Other(BoxError),
-}
-
-impl From<WatchError> for GenericError {
-    fn from(err: WatchError) -> Self {
-        Self::Request(Box::new(err))
-    }
+    #[error("Invalid JWT")]
+    InvalidJwt,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -707,11 +600,11 @@ pub struct WatchRegister {
     pub register_auth: String,
 }
 
-impl RequestPayload for WatchRegister {
+impl ServiceRequest for WatchRegister {
     type Error = WatchError;
     type Response = WatchRegisterResponse;
 
-    fn validate(&self) -> Result<(), ValidationError> {
+    fn validate(&self) -> Result<(), PayloadError> {
         Ok(())
     }
 
@@ -728,11 +621,11 @@ pub struct WatchUnregister {
     pub unregister_auth: String,
 }
 
-impl RequestPayload for WatchUnregister {
+impl ServiceRequest for WatchUnregister {
     type Error = WatchError;
     type Response = bool;
 
-    fn validate(&self) -> Result<(), ValidationError> {
+    fn validate(&self) -> Result<(), PayloadError> {
         Ok(())
     }
 
@@ -751,19 +644,19 @@ pub struct Subscription {
     pub data: SubscriptionData,
 }
 
-impl RequestPayload for Subscription {
+impl ServiceRequest for Subscription {
     type Error = GenericError;
     type Response = bool;
 
-    fn validate(&self) -> Result<(), ValidationError> {
+    fn validate(&self) -> Result<(), PayloadError> {
         self.id
             .decode()
-            .map_err(ValidationError::SubscriptionIdDecoding)?;
+            .map_err(|_| PayloadError::InvalidSubscriptionId)?;
 
         self.data
             .topic
             .decode()
-            .map_err(ValidationError::TopicDecoding)?;
+            .map_err(|_| PayloadError::InvalidTopic)?;
 
         Ok(())
     }
@@ -872,13 +765,13 @@ impl Request {
     }
 
     /// Validates the request payload.
-    pub fn validate(&self) -> Result<(), ValidationError> {
+    pub fn validate(&self) -> Result<(), PayloadError> {
         if !self.id.validate() {
-            return Err(ValidationError::RequestId);
+            return Err(PayloadError::InvalidRequestId);
         }
 
         if self.jsonrpc.as_ref() != JSON_RPC_VERSION_STR {
-            return Err(ValidationError::JsonRpcVersion);
+            return Err(PayloadError::InvalidJsonRpcVersion);
         }
 
         match &self.params {

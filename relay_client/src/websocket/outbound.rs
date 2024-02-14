@@ -1,7 +1,7 @@
 use {
-    crate::Error,
+    crate::{error::Error, ClientError},
     pin_project::pin_project,
-    relay_rpc::rpc::{Params, RequestPayload},
+    relay_rpc::rpc::{Params, ServiceRequest},
     std::{
         future::Future,
         marker::PhantomData,
@@ -16,13 +16,13 @@ use {
 #[derive(Debug)]
 pub struct OutboundRequest {
     pub(super) params: Params,
-    pub(super) tx: oneshot::Sender<Result<serde_json::Value, Error>>,
+    pub(super) tx: oneshot::Sender<Result<serde_json::Value, ClientError>>,
 }
 
 impl OutboundRequest {
     pub(super) fn new(
         params: Params,
-        tx: oneshot::Sender<Result<serde_json::Value, Error>>,
+        tx: oneshot::Sender<Result<serde_json::Value, ClientError>>,
     ) -> Self {
         Self { params, tx }
     }
@@ -33,12 +33,12 @@ impl OutboundRequest {
 #[pin_project]
 pub struct ResponseFuture<T> {
     #[pin]
-    rx: oneshot::Receiver<Result<serde_json::Value, Error>>,
+    rx: oneshot::Receiver<Result<serde_json::Value, ClientError>>,
     _marker: PhantomData<T>,
 }
 
 impl<T> ResponseFuture<T> {
-    pub(super) fn new(rx: oneshot::Receiver<Result<serde_json::Value, Error>>) -> Self {
+    pub(super) fn new(rx: oneshot::Receiver<Result<serde_json::Value, ClientError>>) -> Self {
         Self {
             rx,
             _marker: PhantomData,
@@ -48,22 +48,22 @@ impl<T> ResponseFuture<T> {
 
 impl<T> Future for ResponseFuture<T>
 where
-    T: RequestPayload,
+    T: ServiceRequest,
 {
-    type Output = Result<T::Response, Error>;
+    type Output = Result<T::Response, Error<T::Error>>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
 
-        let result = ready!(this.rx.poll(cx)).map_err(|_| Error::ChannelClosed)?;
+        let result = ready!(this.rx.poll(cx)).map_err(|_| ClientError::ChannelClosed)?;
 
         let result = match result {
-            Ok(value) => serde_json::from_value(value).map_err(Error::Deserialization),
+            Ok(value) => serde_json::from_value(value).map_err(ClientError::Deserialization),
 
             Err(err) => Err(err),
         };
 
-        Poll::Ready(result)
+        Poll::Ready(result.map_err(Into::into))
     }
 }
 
@@ -84,9 +84,9 @@ impl<T> EmptyResponseFuture<T> {
 
 impl<T> Future for EmptyResponseFuture<T>
 where
-    T: RequestPayload,
+    T: ServiceRequest,
 {
-    type Output = Result<(), Error>;
+    type Output = Result<(), Error<T::Error>>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         Poll::Ready(ready!(self.project().rx.poll(cx)).map(|_| ()))
@@ -98,7 +98,7 @@ where
 /// [`ClientStream`][crate::client::ClientStream].
 pub fn create_request<T>(data: T) -> (OutboundRequest, ResponseFuture<T>)
 where
-    T: RequestPayload,
+    T: ServiceRequest,
 {
     let (tx, rx) = oneshot::channel();
 
