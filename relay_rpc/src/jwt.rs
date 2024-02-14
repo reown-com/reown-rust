@@ -1,7 +1,7 @@
 use {
     crate::domain::DidKey,
     chrono::Utc,
-    ed25519_dalek::{ed25519::signature::Signature, Keypair, PublicKey, Signer},
+    ed25519_dalek::{Signer, SigningKey},
     serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::collections::HashSet,
 };
@@ -103,12 +103,11 @@ pub trait VerifyableClaims: Serialize + DeserializeOwned {
     /// Encodes the claims into a JWT string, signing it with the provided key.
     /// Returns an error if the provided key does not match the public key in
     /// the claims (`iss`), or if serialization fails.
-    fn encode(&self, key: &Keypair) -> Result<String, JwtError> {
-        let public_key = PublicKey::from_bytes(self.basic().iss.as_ref())
-            .map_err(|_| JwtError::InvalidKeypair)?;
+    fn encode(&self, key: &SigningKey) -> Result<String, JwtError> {
+        let public_key = self.basic().iss.0.as_public_key();
 
         // Make sure the keypair matches the public key in the claims.
-        if public_key != key.public_key() {
+        if public_key != key.verifying_key() {
             return Err(JwtError::InvalidKeypair);
         }
 
@@ -116,7 +115,7 @@ pub trait VerifyableClaims: Serialize + DeserializeOwned {
         let header = encoder.encode(serde_json::to_string(&JwtHeader::default())?.as_bytes());
         let claims = encoder.encode(serde_json::to_string(self)?.as_bytes());
         let message = format!("{header}.{claims}");
-        let signature = encoder.encode(key.sign(message.as_bytes()).as_bytes());
+        let signature = encoder.encode(&key.sign(message.as_bytes()).to_bytes());
 
         Ok(format!("{message}.{signature}"))
     }
@@ -240,7 +239,8 @@ mod test {
             domain::ClientId,
             jwt::{JwtBasicClaims, JwtError, VerifyableClaims, JWT_VALIDATION_TIME_LEEWAY_SECS},
         },
-        ed25519_dalek::Keypair,
+        ed25519_dalek::SigningKey,
+        rand::rngs::OsRng,
         std::{collections::HashSet, time::Duration},
     };
 
@@ -283,7 +283,7 @@ mod test {
         let jwt = Jwt("eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkaWQ6a2V5Ono2TWtvZEhad25lVlJTaHRhTGY4SktZa3hwREdwMXZHWm5wR21kQnBYOE0yZXh4SGwiLCJzdWIiOiJjNDc5ZmU1ZGM0NjRlNzcxZTc4YjE5M2QyMzlhNjViNThkMjc4Y2FkMWMzNGJmYjBiNTcxNmU1YmI1MTQ5MjhlIiwiYXVkIjoid3NzOi8vcmVsYXkud2FsbGV0Y29ubmVjdC5jb20iLCJpYXQiOjE2NTY5MTAwOTcsImV4cCI6NDgxMjY3MDA5N30.nLdxz4f6yJ8HsWZJUvpSHjFjoat4PfJav-kyqdHj6JXcX5SyDvp3QNB9doyzRWb9jpbA36Av0qn4kqLl-pGuBg".to_owned());
         assert!(matches!(jwt.decode(&aud), Err(JwtError::Serialization(..))));
 
-        let keypair = Keypair::generate(&mut rand::thread_rng());
+        let keypair = SigningKey::generate(&mut OsRng);
         let sub: String = "test".to_owned();
 
         // IAT in future.

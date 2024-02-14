@@ -125,25 +125,23 @@ mod test {
         super::*,
         crate::{auth::RELAY_WEBSOCKET_ADDRESS, domain::DecodedClientId},
         chrono::DateTime,
-        ed25519_dalek::Keypair,
+        ed25519_dalek::SigningKey,
     };
 
-    const KEYPAIR: [u8; 64] = [
+    const KEYPAIR: [u8; 32] = [
         215, 142, 127, 216, 153, 183, 205, 110, 103, 118, 181, 195, 60, 71, 5, 221, 100, 196, 207,
-        81, 229, 11, 116, 121, 235, 104, 1, 121, 25, 18, 218, 83, 216, 230, 100, 248, 132, 110, 55,
-        65, 221, 87, 66, 160, 36, 95, 116, 86, 169, 49, 107, 17, 13, 50, 22, 147, 199, 109, 125,
-        155, 89, 190, 186, 171,
+        81, 229, 11, 116, 121, 235, 104, 1, 121, 25, 18, 218, 83,
     ];
 
     #[test]
     fn watch_register_jwt() {
-        let key = Keypair::from_bytes(&KEYPAIR).unwrap();
+        let key = SigningKey::from_bytes(&KEYPAIR);
         let iat = DateTime::parse_from_rfc3339("2000-01-01T00:00:00Z").unwrap();
         let exp = DateTime::parse_from_rfc3339("3000-01-01T00:00:00Z").unwrap();
 
         let claims = WatchRegisterClaims {
             basic: JwtBasicClaims {
-                iss: DecodedClientId::from_key(&key.public_key()).into(),
+                iss: DecodedClientId::from_key(&key.verifying_key()).into(),
                 aud: RELAY_WEBSOCKET_ADDRESS.to_owned(),
                 sub: "https://example.com".to_owned(),
                 iat: iat.timestamp(),
@@ -172,13 +170,13 @@ mod test {
 
     #[test]
     fn watch_unregister_jwt() {
-        let key = Keypair::from_bytes(&KEYPAIR).unwrap();
+        let key = SigningKey::from_bytes(&KEYPAIR);
         let iat = DateTime::parse_from_rfc3339("2000-01-01T00:00:00Z").unwrap();
         let exp = DateTime::parse_from_rfc3339("3000-01-01T00:00:00Z").unwrap();
 
         let claims = WatchUnregisterClaims {
             basic: JwtBasicClaims {
-                iss: DecodedClientId::from_key(&key.public_key()).into(),
+                iss: DecodedClientId::from_key(&key.verifying_key()).into(),
                 aud: RELAY_WEBSOCKET_ADDRESS.to_owned(),
                 sub: "https://example.com".to_owned(),
                 iat: iat.timestamp(),
@@ -205,14 +203,14 @@ mod test {
 
     #[test]
     fn watch_event_jwt() {
-        let key = Keypair::from_bytes(&KEYPAIR).unwrap();
+        let key = SigningKey::from_bytes(&KEYPAIR);
         let iat = DateTime::parse_from_rfc3339("2000-01-01T00:00:00Z").unwrap();
         let exp = DateTime::parse_from_rfc3339("3000-01-01T00:00:00Z").unwrap();
         let topic = Topic::from("474e88153f4db893de42c35e1891dc0e37a02e11961385de0475460fb48b8639");
 
         let claims = WatchEventClaims {
             basic: JwtBasicClaims {
-                iss: DecodedClientId::from_key(&key.public_key()).into(),
+                iss: DecodedClientId::from_key(&key.verifying_key()).into(),
                 aud: RELAY_WEBSOCKET_ADDRESS.to_owned(),
                 sub: "https://example.com".to_owned(),
                 iat: iat.timestamp(),

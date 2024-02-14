@@ -9,7 +9,7 @@ use {
         new_type,
     },
     derive_more::{AsMut, AsRef},
-    ed25519_dalek::PublicKey,
+    ed25519_dalek::VerifyingKey,
     serde::{Deserialize, Serialize},
     serde_aux::prelude::deserialize_number_from_string,
     std::{str::FromStr, sync::Arc},
@@ -82,7 +82,7 @@ pub struct DidKey(
     #[serde(with = "crate::serde_helpers::client_id_as_did_key")] pub DecodedClientId,
 );
 
-impl From<DidKey> for PublicKey {
+impl From<DidKey> for VerifyingKey {
     fn from(val: DidKey) -> Self {
         val.0.as_public_key()
     }
@@ -119,24 +119,24 @@ impl DecodedClientId {
     }
 
     #[inline]
-    pub fn from_key(key: &PublicKey) -> Self {
+    pub fn from_key(key: &VerifyingKey) -> Self {
         Self(*key.as_bytes())
     }
 
     #[inline]
-    pub fn as_public_key(&self) -> PublicKey {
+    pub fn as_public_key(&self) -> VerifyingKey {
         // We know that the length is correct, so we can just unwrap.
-        PublicKey::from_bytes(&self.0).unwrap()
+        VerifyingKey::from_bytes(&self.0).unwrap()
     }
 }
 
-impl From<PublicKey> for DecodedClientId {
-    fn from(key: PublicKey) -> Self {
+impl From<VerifyingKey> for DecodedClientId {
+    fn from(key: VerifyingKey) -> Self {
         Self::from_key(&key)
     }
 }
 
-impl From<DecodedClientId> for PublicKey {
+impl From<DecodedClientId> for VerifyingKey {
     fn from(val: DecodedClientId) -> Self {
         val.as_public_key()
     }

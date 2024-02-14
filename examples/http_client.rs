@@ -1,7 +1,7 @@
 use {
     relay_client::{http::Client, ConnectionOptions},
     relay_rpc::{
-        auth::{ed25519_dalek::Keypair, rand, AuthToken},
+        auth::{ed25519_dalek::SigningKey, rand, AuthToken},
         domain::Topic,
     },
     std::{sync::Arc, time::Duration},
@@ -20,7 +20,7 @@ struct Args {
     project_id: String,
 }
 
-fn create_conn_opts(key: &Keypair, address: &str, project_id: &str) -> ConnectionOptions {
+fn create_conn_opts(key: &SigningKey, address: &str, project_id: &str) -> ConnectionOptions {
     let aud = Url::parse(address)
         .unwrap()
         .origin()
@@ -39,10 +39,10 @@ fn create_conn_opts(key: &Keypair, address: &str, project_id: &str) -> Connectio
 async fn main() -> anyhow::Result<()> {
     let args = Args::from_args();
 
-    let key1 = Keypair::generate(&mut rand::thread_rng());
+    let key1 = SigningKey::generate(&mut rand::thread_rng());
     let client1 = Client::new(&create_conn_opts(&key1, &args.address, &args.project_id))?;
 
-    let key2 = Keypair::generate(&mut rand::thread_rng());
+    let key2 = SigningKey::generate(&mut rand::thread_rng());
     let client2 = Client::new(&create_conn_opts(&key2, &args.address, &args.project_id))?;
 
     let topic = Topic::generate();

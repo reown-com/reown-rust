@@ -6,7 +6,7 @@ use {
     },
     http::{HeaderMap, StatusCode},
     relay_rpc::{
-        auth::ed25519_dalek::Keypair,
+        auth::ed25519_dalek::SigningKey,
         domain::{DecodedClientId, SubscriptionId, Topic},
         jwt::{self, JwtError, VerifyableClaims},
         rpc::{self, Receipt, RequestPayload},
@@ -168,7 +168,7 @@ impl Client {
     pub async fn watch_register(
         &self,
         request: WatchRegisterRequest,
-        keypair: &Keypair,
+        keypair: &SigningKey,
     ) -> Response<rpc::WatchRegister> {
         let iat = chrono::Utc::now().timestamp();
         let ttl_sec: i64 = request
@@ -180,7 +180,7 @@ impl Client {
 
         let claims = rpc::WatchRegisterClaims {
             basic: jwt::JwtBasicClaims {
-                iss: DecodedClientId::from_key(&keypair.public_key()).into(),
+                iss: DecodedClientId::from_key(&keypair.verifying_key()).into(),
                 aud: self.origin.clone(),
                 iat,
                 sub: request.service_url,
@@ -212,13 +212,13 @@ impl Client {
     pub async fn watch_unregister(
         &self,
         request: WatchUnregisterRequest,
-        keypair: &Keypair,
+        keypair: &SigningKey,
     ) -> Response<rpc::WatchUnregister> {
         let iat = chrono::Utc::now().timestamp();
 
         let claims = rpc::WatchUnregisterClaims {
             basic: jwt::JwtBasicClaims {
-                iss: DecodedClientId::from_key(&keypair.public_key()).into(),
+                iss: DecodedClientId::from_key(&keypair.verifying_key()).into(),
                 aud: self.origin.clone(),
                 iat,
                 sub: request.service_url,
