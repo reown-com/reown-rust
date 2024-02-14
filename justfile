@@ -53,7 +53,7 @@ clippy:
 
   if command -v cargo-clippy >/dev/null; then
     echo '==> Running clippy'
-    cargo clippy --workspace --all-features --tests -- -D clippy::all -W clippy::style
+    cargo clippy --workspace --all-features --all-targets -- -D clippy::all -W clippy::style
   else
     echo '==> clippy not found in PATH, skipping'
     echo '    ^^^^^^ To install `rustup component add clippy`, see https://github.com/rust-lang/rust-clippy for details'

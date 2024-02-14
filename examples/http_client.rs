@@ -64,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
 
     let messages = client2.fetch(topic).await?.messages;
     let message = messages
-        .get(0)
+        .first()
         .ok_or(anyhow::anyhow!("fetch did not return any messages"))?;
 
     println!("[client2] received message: {}", message.message);

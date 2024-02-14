@@ -206,7 +206,7 @@ async fn main() -> anyhow::Result<()> {
 
     let messages = subscriber.fetch(topic).await?.messages;
     let message = messages
-        .get(0)
+        .first()
         .ok_or(anyhow::anyhow!("fetch did not return any messages"))?;
     println!("[subscriber] received message: {}", message.message);
 
