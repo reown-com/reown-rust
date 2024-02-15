@@ -55,11 +55,25 @@ jobs:
           profile: default
           override: true
 
+      # Install nightly which is required for supporting `-Z minimal-versions`
+      # https://github.com/rust-lang/cargo/issues/5657
+      - name: "Install Rust nightly"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+
       - uses: Swatinem/rust-cache@v2
 
       - uses: taiki-e/install-action@v1
         with:
           tool: nextest
+
+      # Install the minimal versions this package says it supports
+      # https://users.rust-lang.org/t/psa-please-specify-precise-dependency-versions-in-cargo-toml/71277
+      # https://github.com/rust-lang/cargo/issues/5657
+      - name: "Install minimal package versions"
+        run: cargo +nightly -Z minimal-versions update
 
       - name: "Cargo ${{ matrix.cargo.name }}"
         uses: actions-rs/cargo@v1
