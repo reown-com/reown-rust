@@ -4,7 +4,7 @@ use {
         ConnectionOptions,
     },
     relay_rpc::{
-        auth::{ed25519_dalek::SigningKey, rand, AuthToken},
+        auth::{ed25519_dalek::SigningKey, AuthToken},
         domain::{DecodedClientId, Topic},
         jwt::VerifyableClaims,
         rpc,

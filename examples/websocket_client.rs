@@ -5,7 +5,7 @@ use {
         ConnectionOptions,
     },
     relay_rpc::{
-        auth::{ed25519_dalek::SigningKey, rand, AuthToken},
+        auth::{ed25519_dalek::SigningKey, AuthToken},
         domain::Topic,
     },
     std::{sync::Arc, time::Duration},

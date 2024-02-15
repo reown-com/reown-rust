@@ -1,3 +1,4 @@
+pub use ed25519_dalek;
 use {
     crate::{
         domain::DecodedClientId,
@@ -8,7 +9,6 @@ use {
     serde::{Deserialize, Serialize},
     std::{fmt::Display, time::Duration},
 };
-pub use {chrono, ed25519_dalek, rand};
 
 #[cfg(feature = "cacao")]
 pub mod cacao;
