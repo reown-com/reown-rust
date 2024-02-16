@@ -592,7 +592,7 @@ fn validation() {
     };
     assert_eq!(request.validate(), Ok(()));
 
-    // Batch receive: empty list.PayloadError
+    // Batch receive: empty list.
     let request = Request {
         id,
         jsonrpc: jsonrpc.clone(),

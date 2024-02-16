@@ -102,7 +102,7 @@ pub enum InternalError {
 /// into [`super::ErrorResponse`], and should be specific enough for the clients
 /// to make sense of the problem.
 #[derive(Debug, thiserror::Error, strum::IntoStaticStr, PartialEq, Eq)]
-pub enum Error<T: ServiceError> {
+pub enum Error<T> {
     #[error("Auth error: {0}")]
     Auth(#[from] AuthError),
 
@@ -122,11 +122,11 @@ pub enum Error<T: ServiceError> {
 impl<T: ServiceError> Error<T> {
     pub fn code(&self) -> i32 {
         match self {
-            Self::Auth(_) => ERROR_CODE_AUTH,
-            Self::TooManyRequests => ERROR_CODE_TOO_MANY_REQUESTS,
-            Self::Payload(_) => ERROR_CODE_PAYLOAD,
-            Self::Handler(_) => ERROR_CODE_HANDLER,
-            Self::Internal(_) => ERROR_CODE_INTERNAL,
+            Self::Auth(_) => CODE_AUTH,
+            Self::TooManyRequests => CODE_TOO_MANY_REQUESTS,
+            Self::Payload(_) => CODE_PAYLOAD,
+            Self::Handler(_) => CODE_HANDLER,
+            Self::Internal(_) => CODE_INTERNAL,
         }
     }
 
@@ -141,11 +141,11 @@ impl<T: ServiceError> Error<T> {
     }
 }
 
-pub const ERROR_CODE_AUTH: i32 = 3000;
-pub const ERROR_CODE_TOO_MANY_REQUESTS: i32 = 3001;
-pub const ERROR_CODE_PAYLOAD: i32 = -32600;
-pub const ERROR_CODE_HANDLER: i32 = -32000;
-pub const ERROR_CODE_INTERNAL: i32 = -32603;
+pub const CODE_AUTH: i32 = 3000;
+pub const CODE_TOO_MANY_REQUESTS: i32 = 3001;
+pub const CODE_PAYLOAD: i32 = -32600;
+pub const CODE_HANDLER: i32 = -32000;
+pub const CODE_INTERNAL: i32 = -32603;
 
 #[derive(Debug, thiserror::Error)]
 #[error("Invalid error data")]
@@ -158,11 +158,11 @@ impl<T: ServiceError> TryFrom<ErrorData> for Error<T> {
         let tag = &err.data;
 
         let err = match err.code {
-            ERROR_CODE_AUTH => Error::Auth(try_parse_error(tag)?),
-            ERROR_CODE_TOO_MANY_REQUESTS => Error::TooManyRequests,
-            ERROR_CODE_PAYLOAD => Error::Payload(try_parse_error(tag)?),
-            ERROR_CODE_HANDLER => Error::Handler(try_parse_error(tag)?),
-            ERROR_CODE_INTERNAL => Error::Internal(try_parse_error(tag)?),
+            CODE_AUTH => Error::Auth(try_parse_error(tag)?),
+            CODE_TOO_MANY_REQUESTS => Error::TooManyRequests,
+            CODE_PAYLOAD => Error::Payload(try_parse_error(tag)?),
+            CODE_HANDLER => Error::Handler(try_parse_error(tag)?),
+            CODE_INTERNAL => Error::Internal(try_parse_error(tag)?),
             _ => return Err(InvalidErrorData),
         };
 

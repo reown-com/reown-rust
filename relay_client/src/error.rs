@@ -75,7 +75,7 @@ impl From<rpc::ErrorData> for ClientError {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum Error<T: ServiceError> {
+pub enum Error<T> {
     /// Client errors encountered while performing the request.
     #[error(transparent)]
     Client(ClientError),
