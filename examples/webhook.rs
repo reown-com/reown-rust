@@ -4,7 +4,7 @@ use {
         ConnectionOptions,
     },
     relay_rpc::{
-        auth::{ed25519_dalek::Keypair, rand, AuthToken},
+        auth::{ed25519_dalek::SigningKey, AuthToken},
         domain::{DecodedClientId, Topic},
         jwt::VerifyableClaims,
         rpc,
@@ -35,7 +35,7 @@ struct Args {
     webhook_server_port: u16,
 }
 
-fn create_conn_opts(key: &Keypair, address: &str, project_id: &str) -> ConnectionOptions {
+fn create_conn_opts(key: &SigningKey, address: &str, project_id: &str) -> ConnectionOptions {
     let aud = Url::parse(address)
         .unwrap()
         .origin()
@@ -122,7 +122,7 @@ async fn main() -> anyhow::Result<()> {
     // Give time for the server to start up.
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    let publisher_key = Keypair::generate(&mut rand::thread_rng());
+    let publisher_key = SigningKey::generate(&mut rand::thread_rng());
     let publisher = Client::new(&create_conn_opts(
         &publisher_key,
         &args.address,
@@ -130,10 +130,10 @@ async fn main() -> anyhow::Result<()> {
     ))?;
     println!(
         "[publisher] client id: {}",
-        DecodedClientId::from(publisher_key.public_key()).to_did_key()
+        DecodedClientId::from(publisher_key.verifying_key()).to_did_key()
     );
 
-    let subscriber_key = Keypair::generate(&mut rand::thread_rng());
+    let subscriber_key = SigningKey::generate(&mut rand::thread_rng());
     let subscriber = Client::new(&create_conn_opts(
         &subscriber_key,
         &args.address,
@@ -141,7 +141,7 @@ async fn main() -> anyhow::Result<()> {
     ))?;
     println!(
         "[subscriber] client id: {}",
-        DecodedClientId::from(subscriber_key.public_key()).to_did_key()
+        DecodedClientId::from(subscriber_key.verifying_key()).to_did_key()
     );
 
     let topic = Topic::generate();

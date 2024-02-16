@@ -1,14 +1,14 @@
+pub use ed25519_dalek;
 use {
     crate::{
         domain::DecodedClientId,
         jwt::{JwtBasicClaims, JwtHeader},
     },
     chrono::{DateTime, Utc},
-    ed25519_dalek::{ed25519::signature::Signature, Keypair, Signer},
+    ed25519_dalek::{Signer, SigningKey},
     serde::{Deserialize, Serialize},
     std::{fmt::Display, time::Duration},
 };
-pub use {chrono, ed25519_dalek, rand};
 
 #[cfg(feature = "cacao")]
 pub mod cacao;
@@ -80,7 +80,7 @@ impl AuthToken {
         self
     }
 
-    pub fn as_jwt(&self, key: &Keypair) -> Result<SerializedAuthToken, Error> {
+    pub fn as_jwt(&self, key: &SigningKey) -> Result<SerializedAuthToken, Error> {
         let iat = self.iat.unwrap_or_else(Utc::now);
         let aud = self.aud.as_deref().unwrap_or(DEFAULT_TOKEN_AUD);
 
@@ -89,7 +89,7 @@ impl AuthToken {
 }
 
 pub fn encode_auth_token(
-    key: &Keypair,
+    key: &SigningKey,
     sub: impl Into<String>,
     aud: impl Into<String>,
     iat: DateTime<Utc>,
@@ -105,7 +105,7 @@ pub fn encode_auth_token(
 
     let claims = {
         let data = JwtBasicClaims {
-            iss: DecodedClientId::from_key(&key.public_key()).into(),
+            iss: DecodedClientId::from_key(&key.verifying_key()).into(),
             sub: sub.into(),
             aud: aud.into(),
             iat: iat.timestamp(),
@@ -121,7 +121,7 @@ pub fn encode_auth_token(
     let signature = {
         let data = key.sign(message.as_bytes());
 
-        encoder.encode(data.as_bytes())
+        encoder.encode(&data.to_bytes())
     };
 
     Ok(SerializedAuthToken(format!("{message}.{signature}")))

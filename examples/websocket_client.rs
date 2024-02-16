@@ -5,7 +5,7 @@ use {
         ConnectionOptions,
     },
     relay_rpc::{
-        auth::{ed25519_dalek::Keypair, rand, AuthToken},
+        auth::{ed25519_dalek::SigningKey, AuthToken},
         domain::Topic,
     },
     std::{sync::Arc, time::Duration},
@@ -59,7 +59,7 @@ impl ConnectionHandler for Handler {
 }
 
 fn create_conn_opts(address: &str, project_id: &str) -> ConnectionOptions {
-    let key = Keypair::generate(&mut rand::thread_rng());
+    let key = SigningKey::generate(&mut rand::thread_rng());
 
     let auth = AuthToken::new("http://example.com")
         .aud(address)
