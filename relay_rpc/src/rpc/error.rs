@@ -136,7 +136,7 @@ impl<T: ServiceError> Error<T> {
             Self::Payload(err) => err.tag(),
             Self::Handler(err) => err.tag(),
             Self::Internal(err) => err.tag(),
-            Self::TooManyRequests => self.tag(),
+            Self::TooManyRequests => self.into(),
         }
     }
 }

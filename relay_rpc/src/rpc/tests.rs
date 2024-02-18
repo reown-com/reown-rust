@@ -636,12 +636,21 @@ fn error_tags() {
     // compatibility with other SDKs as a result of refactoring.
 
     assert_eq!(
+        Error::<GenericError>::TooManyRequests.tag(),
+        "TooManyRequests"
+    );
+
+    assert_eq!(
         SubscriptionError::SubscriberLimitExceeded.tag(),
         "SubscriberLimitExceeded"
     );
 
     assert_eq!(PublishError::TtlTooShort.tag(), "TtlTooShort");
     assert_eq!(PublishError::TtlTooLong.tag(), "TtlTooLong");
+    assert_eq!(
+        PublishError::MailboxLimitExceeded.tag(),
+        "MailboxLimitExceeded"
+    );
 
     assert_eq!(GenericError::Unknown.tag(), "Unknown");
 

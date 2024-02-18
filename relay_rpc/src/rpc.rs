@@ -535,6 +535,9 @@ pub enum PublishError {
 
     #[error("TTL too long")]
     TtlTooLong,
+
+    #[error("Mailbox limit exceeded")]
+    MailboxLimitExceeded,
 }
 
 impl ServiceRequest for Publish {
