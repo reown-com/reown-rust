@@ -573,7 +573,7 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::BatchFetchMessages(BatchFetchMessages {
             topics: vec![Topic::from(
-                "c4163cf6PayloadErrorc296e7765411178ed452d1c30337a6230138c98401",
+                "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c98401",
             )],
         }),
     };
