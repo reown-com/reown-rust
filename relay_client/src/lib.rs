@@ -1,5 +1,5 @@
 use {
-    crate::error::{Error, RequestBuildError},
+    crate::error::{ClientError, RequestBuildError},
     ::http::HeaderMap,
     relay_rpc::{
         auth::{SerializedAuthToken, RELAY_WEBSOCKET_ADDRESS},

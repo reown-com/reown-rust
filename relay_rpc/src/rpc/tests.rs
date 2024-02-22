@@ -281,7 +281,7 @@ fn validation() {
             prompt: false,
         }),
     };
-    assert_eq!(request.validate(), Err(ValidationError::RequestId));
+    assert_eq!(request.validate(), Err(PayloadError::InvalidRequestId));
 
     // Invalid JSONRPC version.
     let request = Request {
@@ -295,7 +295,7 @@ fn validation() {
             prompt: false,
         }),
     };
-    assert_eq!(request.validate(), Err(ValidationError::JsonRpcVersion));
+    assert_eq!(request.validate(), Err(PayloadError::InvalidJsonRpcVersion));
 
     // Publish: valid.
     let request = Request {
@@ -323,10 +323,7 @@ fn validation() {
             prompt: false,
         }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::TopicDecoding(DecodingError::Length))
-    );
+    assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));
 
     // Subscribe: valid.
     let request = Request {
@@ -348,10 +345,7 @@ fn validation() {
             block: false,
         }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::TopicDecoding(DecodingError::Length))
-    );
+    assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));
 
     // Unsubscribe: valid.
     let request = Request {
@@ -373,10 +367,7 @@ fn validation() {
             subscription_id: subscription_id.clone(),
         }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::TopicDecoding(DecodingError::Length))
-    );
+    assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));
 
     // Fetch: valid.
     let request = Request {
@@ -396,10 +387,7 @@ fn validation() {
             topic: Topic::from("invalid"),
         }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::TopicDecoding(DecodingError::Length))
-    );
+    assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));
 
     // Subscription: valid.
     let request = Request {
@@ -431,12 +419,7 @@ fn validation() {
             },
         }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::SubscriptionIdDecoding(
-            DecodingError::Length
-        ))
-    );
+    assert_eq!(request.validate(), Err(PayloadError::InvalidSubscriptionId));
 
     // Subscription: invalid topic.
     let request = Request {
@@ -452,10 +435,7 @@ fn validation() {
             },
         }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::TopicDecoding(DecodingError::Length))
-    );
+    assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));
 
     // Batch subscription: valid.
     let request = Request {
@@ -477,7 +457,7 @@ fn validation() {
             block: false,
         }),
     };
-    assert_eq!(request.validate(), Err(ValidationError::BatchEmpty));
+    assert_eq!(request.validate(), Err(PayloadError::BatchEmpty));
 
     // Batch subscription: too many items.
     let topics = (0..MAX_SUBSCRIPTION_BATCH_SIZE + 1)
@@ -491,13 +471,7 @@ fn validation() {
             block: false,
         }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::BatchLimitExceeded {
-            limit: MAX_SUBSCRIPTION_BATCH_SIZE,
-            actual: MAX_SUBSCRIPTION_BATCH_SIZE + 1
-        })
-    );
+    assert_eq!(request.validate(), Err(PayloadError::BatchLimitExceeded));
 
     // Batch subscription: invalid topic.
     let request = Request {
@@ -510,10 +484,7 @@ fn validation() {
             block: false,
         }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::TopicDecoding(DecodingError::Length))
-    );
+    assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));
 
     // Batch unsubscription: valid.
     let request = Request {
@@ -536,7 +507,7 @@ fn validation() {
             subscriptions: vec![],
         }),
     };
-    assert_eq!(request.validate(), Err(ValidationError::BatchEmpty));
+    assert_eq!(request.validate(), Err(PayloadError::BatchEmpty));
 
     // Batch unsubscription: too many items.
     let subscriptions = (0..MAX_SUBSCRIPTION_BATCH_SIZE + 1)
@@ -550,13 +521,7 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::BatchUnsubscribe(BatchUnsubscribe { subscriptions }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::BatchLimitExceeded {
-            limit: MAX_SUBSCRIPTION_BATCH_SIZE,
-            actual: MAX_SUBSCRIPTION_BATCH_SIZE + 1
-        })
-    );
+    assert_eq!(request.validate(), Err(PayloadError::BatchLimitExceeded));
 
     // Batch unsubscription: invalid topic.
     let request = Request {
@@ -571,10 +536,7 @@ fn validation() {
             }],
         }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::TopicDecoding(DecodingError::Length))
-    );
+    assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));
 
     // Batch fetch: valid.
     let request = Request {
@@ -592,7 +554,7 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::BatchFetchMessages(BatchFetchMessages { topics: vec![] }),
     };
-    assert_eq!(request.validate(), Err(ValidationError::BatchEmpty));
+    assert_eq!(request.validate(), Err(PayloadError::BatchEmpty));
 
     // Batch fetch: too many items.
     let topics = (0..MAX_SUBSCRIPTION_BATCH_SIZE + 1)
@@ -603,13 +565,7 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::BatchFetchMessages(BatchFetchMessages { topics }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::BatchLimitExceeded {
-            limit: MAX_SUBSCRIPTION_BATCH_SIZE,
-            actual: MAX_SUBSCRIPTION_BATCH_SIZE + 1
-        })
-    );
+    assert_eq!(request.validate(), Err(PayloadError::BatchLimitExceeded));
 
     // Batch fetch: invalid topic.
     let request = Request {
@@ -621,10 +577,7 @@ fn validation() {
             )],
         }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::TopicDecoding(DecodingError::Length))
-    );
+    assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));
 
     // Batch receive: valid.
     let request = Request {
@@ -645,7 +598,7 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::BatchReceiveMessages(BatchReceiveMessages { receipts: vec![] }),
     };
-    assert_eq!(request.validate(), Err(ValidationError::BatchEmpty));
+    assert_eq!(request.validate(), Err(PayloadError::BatchEmpty));
 
     // Batch receive: too many items.
     let receipts = (0..MAX_RECEIVE_BATCH_SIZE + 1)
@@ -659,13 +612,7 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::BatchReceiveMessages(BatchReceiveMessages { receipts }),
     };
-    assert_eq!(
-        request.validate(),
-        Err(ValidationError::BatchLimitExceeded {
-            limit: MAX_RECEIVE_BATCH_SIZE,
-            actual: MAX_RECEIVE_BATCH_SIZE + 1
-        })
-    );
+    assert_eq!(request.validate(), Err(PayloadError::BatchLimitExceeded));
 
     // Batch receive: invalid topic.
     let request = Request {
@@ -680,8 +627,71 @@ fn validation() {
             }],
         }),
     };
+    assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));
+}
+
+#[test]
+fn error_tags() {
+    // Validate hardcoded string tags, so that we don't accidentally break
+    // compatibility with other SDKs as a result of refactoring.
+
     assert_eq!(
-        request.validate(),
-        Err(ValidationError::TopicDecoding(DecodingError::Length))
+        Error::<GenericError>::TooManyRequests.tag(),
+        "TooManyRequests"
     );
+
+    assert_eq!(
+        SubscriptionError::SubscriberLimitExceeded.tag(),
+        "SubscriberLimitExceeded"
+    );
+
+    assert_eq!(PublishError::TtlTooShort.tag(), "TtlTooShort");
+    assert_eq!(PublishError::TtlTooLong.tag(), "TtlTooLong");
+    assert_eq!(
+        PublishError::MailboxLimitExceeded.tag(),
+        "MailboxLimitExceeded"
+    );
+
+    assert_eq!(GenericError::Unknown.tag(), "Unknown");
+
+    assert_eq!(WatchError::InvalidTtl.tag(), "InvalidTtl");
+    assert_eq!(WatchError::InvalidServiceUrl.tag(), "InvalidServiceUrl");
+    assert_eq!(WatchError::InvalidWebhookUrl.tag(), "InvalidWebhookUrl");
+    assert_eq!(WatchError::InvalidAction.tag(), "InvalidAction");
+    assert_eq!(WatchError::InvalidJwt.tag(), "InvalidJwt");
+
+    assert_eq!(AuthError::ProjectNotFound.tag(), "ProjectNotFound");
+    assert_eq!(
+        AuthError::ProjectIdNotSpecified.tag(),
+        "ProjectIdNotSpecified"
+    );
+    assert_eq!(AuthError::ProjectInactive.tag(), "ProjectInactive");
+    assert_eq!(AuthError::OriginNotAllowed.tag(), "OriginNotAllowed");
+    assert_eq!(AuthError::InvalidJwt.tag(), "InvalidJwt");
+    assert_eq!(AuthError::MissingJwt.tag(), "MissingJwt");
+    assert_eq!(AuthError::CountryBlocked.tag(), "CountryBlocked");
+
+    assert_eq!(PayloadError::InvalidMethod.tag(), "InvalidMethod");
+    assert_eq!(PayloadError::InvalidParams.tag(), "InvalidParams");
+    assert_eq!(
+        PayloadError::PayloadSizeExceeded.tag(),
+        "PayloadSizeExceeded"
+    );
+    assert_eq!(PayloadError::InvalidTopic.tag(), "InvalidTopic");
+    assert_eq!(
+        PayloadError::InvalidSubscriptionId.tag(),
+        "InvalidSubscriptionId"
+    );
+    assert_eq!(PayloadError::InvalidRequestId.tag(), "InvalidRequestId");
+    assert_eq!(
+        PayloadError::InvalidJsonRpcVersion.tag(),
+        "InvalidJsonRpcVersion"
+    );
+    assert_eq!(PayloadError::BatchLimitExceeded.tag(), "BatchLimitExceeded");
+    assert_eq!(PayloadError::BatchEmpty.tag(), "BatchEmpty");
+    assert_eq!(PayloadError::Serialization.tag(), "Serialization");
+
+    assert_eq!(InternalError::StorageError.tag(), "StorageError");
+    assert_eq!(InternalError::Serialization.tag(), "Serialization");
+    assert_eq!(InternalError::Unknown.tag(), "Unknown");
 }

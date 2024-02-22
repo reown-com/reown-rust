@@ -1,6 +1,6 @@
 use {
     crate::{
-        error::{BoxError, Error},
+        error::{BoxError, ClientError, Error},
         ConnectionOptions,
         MessageIdGenerator,
     },
@@ -9,15 +9,15 @@ use {
         auth::ed25519_dalek::SigningKey,
         domain::{DecodedClientId, SubscriptionId, Topic},
         jwt::{self, JwtError, VerifyableClaims},
-        rpc::{self, Receipt, RequestPayload},
+        rpc::{self, Receipt, ServiceRequest},
     },
     std::{sync::Arc, time::Duration},
     url::Url,
 };
 
 pub type TransportError = reqwest::Error;
-pub type Response<T> = Result<<T as RequestPayload>::Response, Error>;
-pub type EmptyResponse = Result<(), Error>;
+pub type Response<T> = Result<<T as ServiceRequest>::Response, Error<<T as ServiceRequest>::Error>>;
+pub type EmptyResponse<T> = Result<(), Error<<T as ServiceRequest>::Error>>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RequestParamsError {
@@ -41,9 +41,6 @@ pub enum HttpClientError {
 
     #[error("JWT error: {0}")]
     Jwt(#[from] JwtError),
-
-    #[error("RPC error: code={} message={}", .0.code, .0.message)]
-    RpcError(rpc::ErrorData),
 }
 
 #[derive(Debug, Clone)]
@@ -82,7 +79,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(opts: &ConnectionOptions) -> Result<Self, Error> {
+    pub fn new(opts: &ConnectionOptions) -> Result<Self, ClientError> {
         let mut headers = HeaderMap::new();
         opts.update_request_headers(&mut headers)?;
 
@@ -111,11 +108,14 @@ impl Client {
         tag: u32,
         ttl: Duration,
         prompt: bool,
-    ) -> EmptyResponse {
+    ) -> EmptyResponse<rpc::Publish> {
         let ttl_secs = ttl
             .as_secs()
             .try_into()
-            .map_err(|_| HttpClientError::InvalidRequest(RequestParamsError::InvalidTtl.into()))?;
+            .map_err(|_| {
+                HttpClientError::InvalidRequest(RequestParamsError::InvalidTtl.into()).into()
+            })
+            .map_err(Error::Client)?;
 
         self.request(rpc::Publish {
             topic,
@@ -175,7 +175,8 @@ impl Client {
             .ttl
             .as_secs()
             .try_into()
-            .map_err(|err| HttpClientError::InvalidRequest(Box::new(err)))?;
+            .map_err(|err| HttpClientError::InvalidRequest(Box::new(err)).into())
+            .map_err(Error::Client)?;
         let exp = iat + ttl_sec;
 
         let claims = rpc::WatchRegisterClaims {
@@ -194,7 +195,11 @@ impl Client {
         };
 
         let payload = rpc::WatchRegister {
-            register_auth: claims.encode(keypair).map_err(HttpClientError::Jwt)?,
+            register_auth: claims
+                .encode(keypair)
+                .map_err(HttpClientError::Jwt)
+                .map_err(ClientError::from)
+                .map_err(Error::Client)?,
         };
 
         self.request(payload).await
@@ -230,7 +235,11 @@ impl Client {
         };
 
         let payload = rpc::WatchUnregister {
-            unregister_auth: claims.encode(keypair).map_err(HttpClientError::Jwt)?,
+            unregister_auth: claims
+                .encode(keypair)
+                .map_err(HttpClientError::Jwt)
+                .map_err(ClientError::from)
+                .map_err(Error::Client)?,
         };
 
         self.request(payload).await
@@ -299,7 +308,7 @@ impl Client {
 
     pub(crate) async fn request<T>(&self, payload: T) -> Response<T>
     where
-        T: RequestPayload,
+        T: ServiceRequest,
     {
         let payload = rpc::Payload::Request(rpc::Request {
             id: self.id_generator.next(),
@@ -307,37 +316,42 @@ impl Client {
             params: payload.into_params(),
         });
 
-        let result = self
-            .client
-            .post(self.url.clone())
-            .json(&payload)
-            .send()
-            .await
-            .map_err(HttpClientError::Transport)?;
+        let response = async {
+            let result = self
+                .client
+                .post(self.url.clone())
+                .json(&payload)
+                .send()
+                .await
+                .map_err(HttpClientError::Transport)?;
 
-        let status = result.status();
+            let status = result.status();
 
-        if !status.is_success() {
-            let body = result.text().await;
-            return Err(HttpClientError::InvalidHttpCode(status, body).into());
+            if !status.is_success() {
+                let body = result.text().await;
+                return Err(HttpClientError::InvalidHttpCode(status, body));
+            }
+
+            result
+                .json::<rpc::Payload>()
+                .await
+                .map_err(|_| HttpClientError::InvalidResponse)
         }
-
-        let response = result
-            .json::<rpc::Payload>()
-            .await
-            .map_err(|_| HttpClientError::InvalidResponse)?;
+        .await
+        .map_err(ClientError::from)
+        .map_err(Error::Client)?;
 
         match response {
             rpc::Payload::Response(rpc::Response::Success(response)) => {
                 serde_json::from_value(response.result)
-                    .map_err(|_| HttpClientError::InvalidResponse.into())
+                    .map_err(|_| Error::Client(HttpClientError::InvalidResponse.into()))
             }
 
             rpc::Payload::Response(rpc::Response::Error(response)) => {
-                Err(HttpClientError::RpcError(response.error).into())
+                Err(ClientError::from(response.error).into())
             }
 
-            _ => Err(HttpClientError::InvalidResponse.into()),
+            _ => Err(Error::Client(HttpClientError::InvalidResponse.into())),
         }
     }
 }

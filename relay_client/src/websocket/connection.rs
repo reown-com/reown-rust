@@ -8,7 +8,7 @@ use {
     },
     crate::{
         websocket::{stream::StreamEvent, PublishedMessage},
-        Error,
+        ClientError,
         HttpRequest,
     },
     futures_util::{stream::FusedStream, Stream, StreamExt},
@@ -22,11 +22,11 @@ use {
 pub(super) enum ConnectionControl {
     Connect {
         request: HttpRequest<()>,
-        tx: oneshot::Sender<Result<(), Error>>,
+        tx: oneshot::Sender<Result<(), ClientError>>,
     },
 
     Disconnect {
-        tx: oneshot::Sender<Result<(), Error>>,
+        tx: oneshot::Sender<Result<(), ClientError>>,
     },
 
     OutboundRequest(OutboundRequest),
@@ -107,7 +107,7 @@ impl Connection {
         Self { stream: None }
     }
 
-    async fn connect(&mut self, request: HttpRequest<()>) -> Result<(), Error> {
+    async fn connect(&mut self, request: HttpRequest<()>) -> Result<(), ClientError> {
         if let Some(mut stream) = self.stream.take() {
             stream.close(None).await?;
         }
@@ -117,7 +117,7 @@ impl Connection {
         Ok(())
     }
 
-    async fn disconnect(&mut self) -> Result<(), Error> {
+    async fn disconnect(&mut self) -> Result<(), ClientError> {
         let stream = self.stream.take();
 
         match stream {
