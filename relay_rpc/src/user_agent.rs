@@ -37,7 +37,7 @@ pub enum ParsingError {
 ///
 /// [`UserAgent`] will only fail to parse an empty string. Otherwise the result
 /// will be either a [`ValidUserAgent`] or an unknown user agent string.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum UserAgent {
     Unknown(String),
     ValidUserAgent(ValidUserAgent),
@@ -46,7 +46,7 @@ pub enum UserAgent {
 /// Represents a valid (parsed) user agent.
 ///
 /// Succeeds in parsing only if all of its parts are successfully parsed.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct ValidUserAgent {
     pub protocol: Protocol,
     pub sdk: Sdk,
@@ -54,26 +54,26 @@ pub struct ValidUserAgent {
     pub id: Option<Id>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct OsInfo {
     pub os_family: String,
     pub ua_family: Option<String>,
     pub version: Option<String>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum ProtocolKind {
     WalletConnect,
     Unknown(String),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Protocol {
     pub kind: ProtocolKind,
     pub version: u32,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum SdkLanguage {
     Js,
     Swift,
@@ -83,13 +83,13 @@ pub enum SdkLanguage {
     Unknown(String),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Sdk {
     pub language: SdkLanguage,
     pub version: String,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum Environment {
     Browser,
     ReactNative,
@@ -99,7 +99,7 @@ pub enum Environment {
     Unknown(String),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Id {
     pub environment: Environment,
     pub host: Option<String>,
