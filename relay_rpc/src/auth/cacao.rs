@@ -7,7 +7,10 @@ use {
     core::fmt::Debug,
     serde::{Deserialize, Serialize},
     serde_json::value::RawValue,
-    std::fmt::{Display, Write},
+    std::{
+        fmt::{Display, Write},
+        sync::Arc,
+    },
 };
 
 pub mod header;
@@ -17,8 +20,8 @@ pub mod signature;
 /// Errors that can occur during Cacao verification.
 #[derive(Debug, thiserror::Error)]
 pub enum CacaoError {
-    #[error("Invalid header")]
-    Header,
+    #[error("Header `t` value unsupported: {0}")]
+    HeaderTypeUnsupported(Arc<str>),
 
     #[error("Invalid or missing identity key in payload resources")]
     PayloadIdentityKey,
