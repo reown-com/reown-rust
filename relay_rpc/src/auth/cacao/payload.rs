@@ -25,7 +25,7 @@ impl Payload {
     const ISS_POSITION_OF_ADDRESS: usize = 4;
     const ISS_POSITION_OF_NAMESPACE: usize = 2;
     const ISS_POSITION_OF_REFERENCE: usize = 3;
-    pub const WALLETCONNECT_IDENTITY_TOKEN: &'static str = "walletconnect_identity_token";
+    pub const WALLETCONNECT_IDENTITY_KEY: &'static str = "walletconnect_identity_key";
 
     /// TODO: write valdation
     pub fn validate(&self) -> Result<(), CacaoError> {
@@ -110,7 +110,7 @@ impl Payload {
             .map_err(|_| CacaoError::PayloadIdentityKey)
             .and_then(|url| {
                 url.query_pairs()
-                    .find(|(key, _)| key == Self::WALLETCONNECT_IDENTITY_TOKEN)
+                    .find(|(key, _)| key == Self::WALLETCONNECT_IDENTITY_KEY)
                     .ok_or(CacaoError::PayloadIdentityKey)
                     .and_then(|(_, value)| Self::extract_did_key(&value))
             })
@@ -176,7 +176,7 @@ mod tests {
                 domain: "example.com".to_owned(),
                 iss: "did:pkh:eip155:1:0xdFe7d0E324ed017a74aE311E9236E6CaDB24176b".to_owned(),
                 statement: None,
-                aud: "https://example.com?walletconnect_identity_token=did:key:z6MkvjNoiz9AXGH1igzrtB54US5hE9bZPQm1ryKGkCLwWht7".to_owned(),
+                aud: "https://example.com?walletconnect_identity_key=did:key:z6MkvjNoiz9AXGH1igzrtB54US5hE9bZPQm1ryKGkCLwWht7".to_owned(),
                 version: Version::V1,
                 nonce: "".to_owned(),
                 iat: "2023-09-07T11:04:23+02:00".to_owned(),
@@ -200,7 +200,7 @@ mod tests {
                 domain: "example.com".to_owned(),
                 iss: "did:pkh:eip155:1:0xdFe7d0E324ed017a74aE311E9236E6CaDB24176b".to_owned(),
                 statement: None,
-                aud: "https://example.com?walletconnect_identity_token=did%3Akey%3Az6MkvjNoiz9AXGH1igzrtB54US5hE9bZPQm1ryKGkCLwWht7".to_owned(),
+                aud: "https://example.com?walletconnect_identity_key=did%3Akey%3Az6MkvjNoiz9AXGH1igzrtB54US5hE9bZPQm1ryKGkCLwWht7".to_owned(),
                 version: Version::V1,
                 nonce: "".to_owned(),
                 iat: "2023-09-07T11:04:23+02:00".to_owned(),
