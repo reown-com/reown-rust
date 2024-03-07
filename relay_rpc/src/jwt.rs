@@ -288,7 +288,10 @@ mod test {
 
         // IAT in future.
         let jwt = AuthToken::new(sub.clone())
-            .iat(chrono::Utc::now() + chrono::Duration::hours(1))
+            .iat(
+                chrono::Utc::now()
+                    + chrono::Duration::try_hours(1).expect("Safe unwrap: does not return None"),
+            )
             .as_jwt(&keypair)
             .unwrap();
         assert!(matches!(
@@ -298,7 +301,11 @@ mod test {
 
         // IAT leeway, valid.
         let jwt = AuthToken::new(sub.clone())
-            .iat(chrono::Utc::now() + chrono::Duration::seconds(JWT_VALIDATION_TIME_LEEWAY_SECS))
+            .iat(
+                chrono::Utc::now()
+                    + chrono::Duration::try_seconds(JWT_VALIDATION_TIME_LEEWAY_SECS)
+                        .expect("Safe unwrap: does not return None"),
+            )
             .as_jwt(&keypair)
             .unwrap();
         assert!(Jwt(jwt.into()).decode(&aud).is_ok());
@@ -306,7 +313,9 @@ mod test {
         // IAT leeway, invalid.
         let jwt = AuthToken::new(sub.clone())
             .iat(
-                chrono::Utc::now() + chrono::Duration::seconds(JWT_VALIDATION_TIME_LEEWAY_SECS + 1),
+                chrono::Utc::now()
+                    + chrono::Duration::try_seconds(JWT_VALIDATION_TIME_LEEWAY_SECS + 1)
+                        .expect("Safe unwrap: does not return None"),
             )
             .as_jwt(&keypair)
             .unwrap();
@@ -317,7 +326,10 @@ mod test {
 
         // Past expiration.
         let jwt = AuthToken::new(sub.clone())
-            .iat(chrono::Utc::now() - chrono::Duration::hours(2))
+            .iat(
+                chrono::Utc::now()
+                    - chrono::Duration::try_hours(2).expect("Safe unwrap: does not return None"),
+            )
             .ttl(Duration::from_secs(3600))
             .as_jwt(&keypair)
             .unwrap();
@@ -330,7 +342,8 @@ mod test {
         let jwt = AuthToken::new(sub.clone())
             .iat(
                 chrono::Utc::now()
-                    - chrono::Duration::seconds(3600 + JWT_VALIDATION_TIME_LEEWAY_SECS),
+                    - chrono::Duration::try_seconds(3600 + JWT_VALIDATION_TIME_LEEWAY_SECS)
+                        .expect("Safe unwrap: does not return None"),
             )
             .ttl(Duration::from_secs(3600))
             .as_jwt(&keypair)
@@ -341,7 +354,8 @@ mod test {
         let jwt = AuthToken::new(sub.clone())
             .iat(
                 chrono::Utc::now()
-                    - chrono::Duration::seconds(3600 + JWT_VALIDATION_TIME_LEEWAY_SECS + 1),
+                    - chrono::Duration::try_seconds(3600 + JWT_VALIDATION_TIME_LEEWAY_SECS + 1)
+                        .expect("Safe unwrap: does not return None"),
             )
             .ttl(Duration::from_secs(3600))
             .as_jwt(&keypair)
