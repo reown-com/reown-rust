@@ -142,21 +142,13 @@ impl Client {
     /// when fully processed by the relay.
     /// Note: This function is experimental and will likely be removed in the
     /// future.
-    pub async fn subscribe_blocking(&self, topic: Topic) -> Response<rpc::Subscribe> {
-        self.request(rpc::Subscribe { topic, block: true }).await
+    pub async fn subscribe_blocking(&self, topic: Topic) -> Response<rpc::SubscribeBlocking> {
+        self.request(rpc::SubscribeBlocking { topic }).await
     }
 
     /// Unsubscribes from a topic.
-    pub async fn unsubscribe(
-        &self,
-        topic: Topic,
-        subscription_id: SubscriptionId,
-    ) -> Response<rpc::Unsubscribe> {
-        self.request(rpc::Unsubscribe {
-            topic,
-            subscription_id,
-        })
-        .await
+    pub async fn unsubscribe(&self, topic: Topic) -> Response<rpc::Unsubscribe> {
+        self.request(rpc::Unsubscribe { topic }).await
     }
 
     /// Fetch mailbox messages for a specific topic.
@@ -265,12 +257,18 @@ impl Client {
     pub async fn batch_subscribe_blocking(
         &self,
         topics: impl Into<Vec<Topic>>,
-    ) -> Response<rpc::BatchSubscribe> {
-        self.request(rpc::BatchSubscribe {
-            topics: topics.into(),
-            block: true,
-        })
-        .await
+    ) -> Result<
+        Vec<Result<SubscriptionId, Error<rpc::SubscriptionError>>>,
+        Error<rpc::SubscriptionError>,
+    > {
+        Ok(self
+            .request(rpc::BatchSubscribeBlocking {
+                topics: topics.into(),
+            })
+            .await?
+            .into_iter()
+            .map(crate::convert_subscription_result)
+            .collect())
     }
 
     /// Unsubscribes from multiple topics.
