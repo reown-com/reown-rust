@@ -8,7 +8,6 @@ use {
     url::Url,
 };
 
-pub mod blockchain_api;
 pub mod get_rpc_url;
 
 pub const EIP1271: &str = "eip1271";

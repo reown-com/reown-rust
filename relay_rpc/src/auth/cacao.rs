@@ -32,6 +32,9 @@ pub enum CacaoError {
     #[error("Invalid address")]
     AddressInvalid,
 
+    #[error("EIP-1271 signatures not supported")]
+    Eip1271NotSupported,
+
     #[error("Unsupported signature type")]
     UnsupportedSignature,
 
@@ -94,7 +97,7 @@ pub struct Cacao {
 impl Cacao {
     const ETHEREUM: &'static str = "Ethereum";
 
-    pub async fn verify(&self, provider: &impl GetRpcUrl) -> Result<bool, CacaoError> {
+    pub async fn verify(&self, provider: Option<&impl GetRpcUrl>) -> Result<bool, CacaoError> {
         self.p.validate()?;
         self.h.validate()?;
         self.s.verify(self, provider).await

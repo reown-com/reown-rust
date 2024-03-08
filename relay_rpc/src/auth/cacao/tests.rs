@@ -3,7 +3,7 @@ use {super::signature::eip1271::get_rpc_url::GetRpcUrl, crate::auth::cacao::Caca
 struct MockGetRpcUrl;
 
 impl GetRpcUrl for MockGetRpcUrl {
-    fn get_rpc_url(&self, _: String) -> Option<Url> {
+    async fn get_rpc_url(&self, _: String) -> Option<Url> {
         None
     }
 }
