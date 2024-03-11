@@ -31,7 +31,6 @@ fn subscribe() {
         1659980684711969.into(),
         Params::Subscribe(Subscribe {
             topic: "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840".into(),
-            block: false,
         }),
     ));
 
@@ -39,7 +38,7 @@ fn subscribe() {
 
     assert_eq!(
         &serialized,
-        r#"{"id":1659980684711969,"jsonrpc":"2.0","method":"irn_subscribe","params":{"topic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","block":false}}"#
+        r#"{"id":1659980684711969,"jsonrpc":"2.0","method":"irn_subscribe","params":{"topic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840"}}"#
     );
 
     let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
@@ -208,7 +207,6 @@ fn deserialize_batch_methods() {
                     Topic::from("c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840"),
                     Topic::from("c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841")
                 ],
-                block: false
             })
         })
     );
@@ -346,7 +344,6 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::Subscribe(Subscribe {
             topic: topic.clone(),
-            block: false,
         }),
     };
     assert_eq!(request.validate(), Ok(()));
@@ -357,7 +354,6 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::Subscribe(Subscribe {
             topic: Topic::from("invalid"),
-            block: false,
         }),
     };
     assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));
@@ -456,7 +452,6 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::BatchSubscribe(BatchSubscribe {
             topics: vec![topic.clone()],
-            block: false,
         }),
     };
     assert_eq!(request.validate(), Ok(()));
@@ -465,10 +460,7 @@ fn validation() {
     let request = Request {
         id,
         jsonrpc: jsonrpc.clone(),
-        params: Params::BatchSubscribe(BatchSubscribe {
-            topics: vec![],
-            block: false,
-        }),
+        params: Params::BatchSubscribe(BatchSubscribe { topics: vec![] }),
     };
     assert_eq!(request.validate(), Err(PayloadError::BatchEmpty));
 
@@ -479,10 +471,7 @@ fn validation() {
     let request = Request {
         id,
         jsonrpc: jsonrpc.clone(),
-        params: Params::BatchSubscribe(BatchSubscribe {
-            topics,
-            block: false,
-        }),
+        params: Params::BatchSubscribe(BatchSubscribe { topics }),
     };
     assert_eq!(request.validate(), Err(PayloadError::BatchLimitExceeded));
 
@@ -494,7 +483,6 @@ fn validation() {
             topics: vec![Topic::from(
                 "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c98401",
             )],
-            block: false,
         }),
     };
     assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));
