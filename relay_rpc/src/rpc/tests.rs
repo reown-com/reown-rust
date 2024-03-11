@@ -249,6 +249,29 @@ fn deserialize_batch_methods() {
             })
         })
     );
+
+    let serialized =
+        r#"{ "id": "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840" }"#;
+    assert_eq!(
+        serde_json::from_str::<'_, SubscriptionResult>(serialized).unwrap(),
+        SubscriptionResult::Id(SubscriptionId::from(
+            "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840"
+        ))
+    );
+
+    let serialized = r#"{
+        "error": {
+            "code": -32600,
+            "message": "Invalid payload: The batch contains too many items",
+            "data": "BatchLimitExceeded"
+        }
+    }"#;
+    assert_eq!(
+        serde_json::from_str::<'_, SubscriptionResult>(serialized).unwrap(),
+        SubscriptionResult::Error(
+            Error::<SubscriptionError>::Payload(PayloadError::BatchLimitExceeded).into()
+        )
+    );
 }
 
 #[test]
