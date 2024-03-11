@@ -222,11 +222,6 @@ pub enum SubscriptionError {
 pub struct Subscribe {
     /// The topic to subscribe to.
     pub topic: Topic,
-
-    /// Whether to disable optimistic response. By default optimistic response
-    /// is enabled.
-    #[serde(default)]
-    pub block: bool,
 }
 
 impl ServiceRequest for Subscribe {
@@ -347,11 +342,6 @@ pub struct FetchResponse {
 pub struct BatchSubscribe {
     /// The topics to subscribe to.
     pub topics: Vec<Topic>,
-
-    /// Whether to disable optimistic response. By default optimistic response
-    /// is enabled.
-    #[serde(default)]
-    pub block: bool,
 }
 
 impl BatchSubscribe {

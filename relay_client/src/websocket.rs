@@ -127,6 +127,8 @@ pub trait ConnectionHandler: Send + 'static {
     fn outbound_error(&mut self, _error: ClientError) {}
 }
 
+type SubscriptionResult<T> = Result<T, Error<SubscriptionError>>;
+
 /// The Relay WebSocket RPC client.
 ///
 /// This provides the high-level access to all of the available RPC methods. For
@@ -174,10 +176,7 @@ impl Client {
     /// Subscribes on topic to receive messages. The request is resolved
     /// optimistically as soon as the relay receives it.
     pub fn subscribe(&self, topic: Topic) -> ResponseFuture<Subscribe> {
-        let (request, response) = create_request(Subscribe {
-            topic,
-            block: false,
-        });
+        let (request, response) = create_request(Subscribe { topic });
 
         self.request(request);
 
@@ -224,7 +223,6 @@ impl Client {
     pub fn batch_subscribe(&self, topics: impl Into<Vec<Topic>>) -> ResponseFuture<BatchSubscribe> {
         let (request, response) = create_request(BatchSubscribe {
             topics: topics.into(),
-            block: false,
         });
 
         self.request(request);
@@ -239,12 +237,7 @@ impl Client {
     pub fn batch_subscribe_blocking(
         &self,
         topics: impl Into<Vec<Topic>>,
-    ) -> impl Future<
-        Output = Result<
-            Vec<Result<SubscriptionId, Error<SubscriptionError>>>,
-            Error<SubscriptionError>,
-        >,
-    > {
+    ) -> impl Future<Output = SubscriptionResult<Vec<SubscriptionResult<SubscriptionId>>>> {
         let (request, response) = create_request(BatchSubscribeBlocking {
             topics: topics.into(),
         });

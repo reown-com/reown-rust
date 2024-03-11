@@ -131,11 +131,7 @@ impl Client {
     /// Subscribes on topic to receive messages. The request is resolved
     /// optimistically as soon as the relay receives it.
     pub async fn subscribe(&self, topic: Topic) -> Response<rpc::Subscribe> {
-        self.request(rpc::Subscribe {
-            topic,
-            block: false,
-        })
-        .await
+        self.request(rpc::Subscribe { topic }).await
     }
 
     /// Subscribes on topic to receive messages. The request is resolved only
@@ -245,7 +241,6 @@ impl Client {
     ) -> Response<rpc::BatchSubscribe> {
         self.request(rpc::BatchSubscribe {
             topics: topics.into(),
-            block: false,
         })
         .await
     }
