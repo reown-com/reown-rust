@@ -3,7 +3,7 @@ use {super::signature::eip1271::get_rpc_url::GetRpcUrl, crate::auth::cacao::Caca
 struct MockGetRpcUrl;
 
 impl GetRpcUrl for MockGetRpcUrl {
-    fn get_rpc_url(&self, _: String) -> Option<Url> {
+    async fn get_rpc_url(&self, _: String) -> Option<Url> {
         None
     }
 }
@@ -32,7 +32,7 @@ async fn cacao_verify_success() {
       }
     }"#;
     let cacao: Cacao = serde_json::from_str(cacao_serialized).unwrap();
-    let result = cacao.verify(&MockGetRpcUrl).await;
+    let result = cacao.verify(Some(&MockGetRpcUrl)).await;
     assert!(result.is_ok());
     assert!(result.map_err(|_| false).unwrap());
 
@@ -69,7 +69,7 @@ async fn cacao_verify_success_identity_in_audience() {
         }
     }"#;
     let cacao: Cacao = serde_json::from_str(cacao_serialized).unwrap();
-    let result = cacao.verify(&MockGetRpcUrl).await;
+    let result = cacao.verify(Some(&MockGetRpcUrl)).await;
     assert!(result.is_ok());
     assert!(result.map_err(|_| false).unwrap());
 
@@ -105,6 +105,6 @@ async fn cacao_verify_failure() {
       }
     }"#;
     let cacao: Cacao = serde_json::from_str(cacao_serialized).unwrap();
-    let result = cacao.verify(&MockGetRpcUrl).await;
+    let result = cacao.verify(Some(&MockGetRpcUrl)).await;
     assert!(result.is_err());
 }

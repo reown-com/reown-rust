@@ -7,10 +7,7 @@ authors = ["WalletConnect Team"]
 license = "Apache-2.0"
 
 [workspace]
-members = [
-    "relay_client",
-    "relay_rpc"
-]
+members = ["blockchain_api", "relay_client", "relay_rpc"]
 
 [features]
 default = ["full"]
@@ -35,12 +32,12 @@ once_cell = "1.19"
 
 [[example]]
 name = "websocket_client"
-required-features = ["client","rpc"]
+required-features = ["client", "rpc"]
 
 [[example]]
 name = "http_client"
-required-features = ["client","rpc"]
+required-features = ["client", "rpc"]
 
 [[example]]
 name = "webhook"
-required-features = ["client","rpc"]
+required-features = ["client", "rpc"]

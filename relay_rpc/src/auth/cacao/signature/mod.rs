@@ -23,7 +23,7 @@ impl Signature {
     pub async fn verify(
         &self,
         cacao: &Cacao,
-        get_provider: &impl GetRpcUrl,
+        provider: Option<&impl GetRpcUrl>,
     ) -> Result<bool, CacaoError> {
         let address = cacao.p.address()?;
 
@@ -36,20 +36,24 @@ impl Signature {
         match self.t.as_str() {
             EIP191 => verify_eip191(&signature, &address, hash),
             EIP1271 => {
-                let chain_id = cacao.p.chain_id_reference()?;
-                let provider = get_provider.get_rpc_url(chain_id);
                 if let Some(provider) = provider {
-                    verify_eip1271(
-                        signature,
-                        Address::from_str(&address).map_err(|_| CacaoError::AddressInvalid)?,
-                        &hash.finalize()[..]
-                            .try_into()
-                            .expect("hash length is 32 bytes"),
-                        provider,
-                    )
-                    .await
+                    let chain_id = cacao.p.chain_id_reference()?;
+                    let provider = provider.get_rpc_url(chain_id).await;
+                    if let Some(provider) = provider {
+                        verify_eip1271(
+                            signature,
+                            Address::from_str(&address).map_err(|_| CacaoError::AddressInvalid)?,
+                            &hash.finalize()[..]
+                                .try_into()
+                                .expect("hash length is 32 bytes"),
+                            provider,
+                        )
+                        .await
+                    } else {
+                        Err(CacaoError::ProviderNotAvailable)
+                    }
                 } else {
-                    Err(CacaoError::ProviderNotAvailable)
+                    Err(CacaoError::Eip1271NotSupported)
                 }
             }
             _ => Err(CacaoError::UnsupportedSignature),
