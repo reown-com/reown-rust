@@ -220,12 +220,10 @@ fn deserialize_batch_methods() {
         "params": {
             "subscriptions": [
                 {
-                    "topic": "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840",
-                    "id": "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841"
+                    "topic": "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840"
                 },
                 {
-                    "topic": "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9842",
-                    "id": "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9843"
+                    "topic": "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9842"
                 }
             ]
         }
@@ -241,21 +239,38 @@ fn deserialize_batch_methods() {
                         topic: Topic::from(
                             "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840"
                         ),
-                        subscription_id: SubscriptionId::from(
-                            "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841"
-                        ),
                     },
                     Unsubscribe {
                         topic: Topic::from(
                             "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9842"
                         ),
-                        subscription_id: SubscriptionId::from(
-                            "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9843"
-                        ),
                     }
                 ]
             })
         })
+    );
+
+    let serialized =
+        r#"{ "id": "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840" }"#;
+    assert_eq!(
+        serde_json::from_str::<'_, SubscriptionResult>(serialized).unwrap(),
+        SubscriptionResult::Id(SubscriptionId::from(
+            "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840"
+        ))
+    );
+
+    let serialized = r#"{
+        "error": {
+            "code": -32600,
+            "message": "Invalid payload: The batch contains too many items",
+            "data": "BatchLimitExceeded"
+        }
+    }"#;
+    assert_eq!(
+        serde_json::from_str::<'_, SubscriptionResult>(serialized).unwrap(),
+        SubscriptionResult::Error(
+            Error::<SubscriptionError>::Payload(PayloadError::BatchLimitExceeded).into()
+        )
     );
 }
 
@@ -353,7 +368,6 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::Unsubscribe(Unsubscribe {
             topic: topic.clone(),
-            subscription_id: subscription_id.clone(),
         }),
     };
     assert_eq!(request.validate(), Ok(()));
@@ -364,7 +378,6 @@ fn validation() {
         jsonrpc: jsonrpc.clone(),
         params: Params::Unsubscribe(Unsubscribe {
             topic: Topic::from("invalid"),
-            subscription_id: subscription_id.clone(),
         }),
     };
     assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));
@@ -491,10 +504,7 @@ fn validation() {
         id,
         jsonrpc: jsonrpc.clone(),
         params: Params::BatchUnsubscribe(BatchUnsubscribe {
-            subscriptions: vec![Unsubscribe {
-                topic,
-                subscription_id: subscription_id.clone(),
-            }],
+            subscriptions: vec![Unsubscribe { topic }],
         }),
     };
     assert_eq!(request.validate(), Ok(()));
@@ -513,7 +523,6 @@ fn validation() {
     let subscriptions = (0..MAX_SUBSCRIPTION_BATCH_SIZE + 1)
         .map(|_| Unsubscribe {
             topic: Topic::generate(),
-            subscription_id: SubscriptionId::generate(),
         })
         .collect();
     let request = Request {
@@ -532,7 +541,6 @@ fn validation() {
                 topic: Topic::from(
                     "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c98401",
                 ),
-                subscription_id,
             }],
         }),
     };

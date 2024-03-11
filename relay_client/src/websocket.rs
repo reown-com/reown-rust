@@ -1,22 +1,28 @@
 use {
     self::connection::{connection_event_loop, ConnectionControl},
-    crate::{error::ClientError, ConnectionOptions},
+    crate::{
+        error::{ClientError, Error},
+        ConnectionOptions,
+    },
     relay_rpc::{
         domain::{MessageId, SubscriptionId, Topic},
         rpc::{
             BatchFetchMessages,
             BatchReceiveMessages,
             BatchSubscribe,
+            BatchSubscribeBlocking,
             BatchUnsubscribe,
             FetchMessages,
             Publish,
             Receipt,
             Subscribe,
+            SubscribeBlocking,
             Subscription,
+            SubscriptionError,
             Unsubscribe,
         },
     },
-    std::{sync::Arc, time::Duration},
+    std::{future::Future, sync::Arc, time::Duration},
     tokio::sync::{
         mpsc::{self, UnboundedSender},
         oneshot,
@@ -182,8 +188,8 @@ impl Client {
     /// when fully processed by the relay.
     /// Note: This function is experimental and will likely be removed in the
     /// future.
-    pub fn subscribe_blocking(&self, topic: Topic) -> ResponseFuture<Subscribe> {
-        let (request, response) = create_request(Subscribe { topic, block: true });
+    pub fn subscribe_blocking(&self, topic: Topic) -> ResponseFuture<SubscribeBlocking> {
+        let (request, response) = create_request(SubscribeBlocking { topic });
 
         self.request(request);
 
@@ -191,15 +197,8 @@ impl Client {
     }
 
     /// Unsubscribes from a topic.
-    pub fn unsubscribe(
-        &self,
-        topic: Topic,
-        subscription_id: SubscriptionId,
-    ) -> EmptyResponseFuture<Unsubscribe> {
-        let (request, response) = create_request(Unsubscribe {
-            topic,
-            subscription_id,
-        });
+    pub fn unsubscribe(&self, topic: Topic) -> EmptyResponseFuture<Unsubscribe> {
+        let (request, response) = create_request(Unsubscribe { topic });
 
         self.request(request);
 
@@ -240,15 +239,25 @@ impl Client {
     pub fn batch_subscribe_blocking(
         &self,
         topics: impl Into<Vec<Topic>>,
-    ) -> ResponseFuture<BatchSubscribe> {
-        let (request, response) = create_request(BatchSubscribe {
+    ) -> impl Future<
+        Output = Result<
+            Vec<Result<SubscriptionId, Error<SubscriptionError>>>,
+            Error<SubscriptionError>,
+        >,
+    > {
+        let (request, response) = create_request(BatchSubscribeBlocking {
             topics: topics.into(),
-            block: true,
         });
 
         self.request(request);
 
-        response
+        async move {
+            Ok(response
+                .await?
+                .into_iter()
+                .map(crate::convert_subscription_result)
+                .collect())
+        }
     }
 
     /// Unsubscribes from multiple topics.

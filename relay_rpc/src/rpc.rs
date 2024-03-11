@@ -196,7 +196,7 @@ impl ErrorResponse {
 }
 
 /// Data structure representing error response params.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ErrorData {
     /// Error code.
     pub code: i32,
@@ -215,7 +215,9 @@ pub enum SubscriptionError {
     SubscriberLimitExceeded,
 }
 
-/// Data structure representing subscribe request params.
+/// Subscription request parameters. This request does not require the
+/// subscription to be fully processed, and returns as soon as the server
+/// receives it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Subscribe {
     /// The topic to subscribe to.
@@ -244,15 +246,36 @@ impl ServiceRequest for Subscribe {
     }
 }
 
+/// Subscription request parameters. This request awaits the subscription to be
+/// fully processed and returns possible errors.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SubscribeBlocking {
+    /// The topic to subscribe to.
+    pub topic: Topic,
+}
+
+impl ServiceRequest for SubscribeBlocking {
+    type Error = SubscriptionError;
+    type Response = SubscriptionId;
+
+    fn validate(&self) -> Result<(), PayloadError> {
+        self.topic
+            .decode()
+            .map_err(|_| PayloadError::InvalidTopic)?;
+
+        Ok(())
+    }
+
+    fn into_params(self) -> Params {
+        Params::SubscribeBlocking(self)
+    }
+}
+
 /// Data structure representing unsubscribe request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Unsubscribe {
     /// The topic to unsubscribe from.
     pub topic: Topic,
-
-    /// The id of the subscription to unsubscribe from.
-    #[serde(rename = "id")]
-    pub subscription_id: SubscriptionId,
 }
 
 impl ServiceRequest for Unsubscribe {
@@ -317,7 +340,9 @@ pub struct FetchResponse {
     pub has_more: bool,
 }
 
-/// Multi-topic subscription request parameters.
+/// Multi-topic subscription request parameters. This request does not require
+/// all subscriptions to be fully processed, and returns as soon as the server
+/// receives it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BatchSubscribe {
     /// The topics to subscribe to.
@@ -329,12 +354,9 @@ pub struct BatchSubscribe {
     pub block: bool,
 }
 
-impl ServiceRequest for BatchSubscribe {
-    type Error = SubscriptionError;
-    type Response = Vec<SubscriptionId>;
-
-    fn validate(&self) -> Result<(), PayloadError> {
-        let batch_size = self.topics.len();
+impl BatchSubscribe {
+    fn validate_topics(topics: &[Topic]) -> Result<(), PayloadError> {
+        let batch_size = topics.len();
 
         if batch_size == 0 {
             return Err(PayloadError::BatchEmpty);
@@ -344,15 +366,52 @@ impl ServiceRequest for BatchSubscribe {
             return Err(PayloadError::BatchLimitExceeded);
         }
 
-        for topic in &self.topics {
+        for topic in topics {
             topic.decode().map_err(|_| PayloadError::InvalidTopic)?;
         }
 
         Ok(())
     }
+}
+
+impl ServiceRequest for BatchSubscribe {
+    type Error = SubscriptionError;
+    type Response = Vec<SubscriptionId>;
+
+    fn validate(&self) -> Result<(), PayloadError> {
+        Self::validate_topics(&self.topics)
+    }
 
     fn into_params(self) -> Params {
         Params::BatchSubscribe(self)
+    }
+}
+
+/// Multi-topic subscription request parameters. This request awaits all
+/// subscriptions to be fully processed and returns possible errors per topic.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BatchSubscribeBlocking {
+    /// The topics to subscribe to.
+    pub topics: Vec<Topic>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SubscriptionResult {
+    Id(SubscriptionId),
+    Error(ErrorData),
+}
+
+impl ServiceRequest for BatchSubscribeBlocking {
+    type Error = SubscriptionError;
+    type Response = Vec<SubscriptionResult>;
+
+    fn validate(&self) -> Result<(), PayloadError> {
+        BatchSubscribe::validate_topics(&self.topics)
+    }
+
+    fn into_params(self) -> Params {
+        Params::BatchSubscribeBlocking(self)
     }
 }
 
@@ -696,6 +755,10 @@ pub enum Params {
     #[serde(rename = "irn_subscribe", alias = "iridium_subscribe")]
     Subscribe(Subscribe),
 
+    /// Parameters to blocking subscribe.
+    #[serde(rename = "irn_subscribeBlocking", alias = "iridium_subscribeBlocking")]
+    SubscribeBlocking(SubscribeBlocking),
+
     /// Parameters to unsubscribe.
     #[serde(rename = "irn_unsubscribe", alias = "iridium_unsubscribe")]
     Unsubscribe(Unsubscribe),
@@ -707,6 +770,13 @@ pub enum Params {
     /// Parameters to batch subscribe.
     #[serde(rename = "irn_batchSubscribe", alias = "iridium_batchSubscribe")]
     BatchSubscribe(BatchSubscribe),
+
+    /// Parameters to blocking batch subscribe.
+    #[serde(
+        rename = "irn_batchSubscribeBlocking",
+        alias = "iridium_batchSubscribeBlocking"
+    )]
+    BatchSubscribeBlocking(BatchSubscribeBlocking),
 
     /// Parameters to batch unsubscribe.
     #[serde(rename = "irn_batchUnsubscribe", alias = "iridium_batchUnsubscribe")]
@@ -779,9 +849,11 @@ impl Request {
 
         match &self.params {
             Params::Subscribe(params) => params.validate(),
+            Params::SubscribeBlocking(params) => params.validate(),
             Params::Unsubscribe(params) => params.validate(),
             Params::FetchMessages(params) => params.validate(),
             Params::BatchSubscribe(params) => params.validate(),
+            Params::BatchSubscribeBlocking(params) => params.validate(),
             Params::BatchUnsubscribe(params) => params.validate(),
             Params::BatchFetchMessages(params) => params.validate(),
             Params::Publish(params) => params.validate(),
