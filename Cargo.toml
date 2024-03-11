@@ -9,18 +9,21 @@ license = "Apache-2.0"
 [workspace]
 members = [
     "relay_client",
-    "relay_rpc"
+    "relay_rpc",
+    "sign_api"
 ]
 
 [features]
 default = ["full"]
-full = ["client", "rpc"]
+full = ["client", "rpc", "sign_api"]
 client = ["dep:relay_client"]
 rpc = ["dep:relay_rpc"]
+sign_api = ["dep:sign_api"]
 
 [dependencies]
 relay_client = { path = "./relay_client", optional = true }
 relay_rpc = { path = "./relay_rpc", optional = true }
+sign_api = { path = "./sign_api", optional = true }
 
 [dev-dependencies]
 anyhow = "1"
