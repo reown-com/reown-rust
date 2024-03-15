@@ -20,8 +20,7 @@ concurrency:
 jobs:
   tasks:
     name: "${{ matrix.cargo.name }}"
-    runs-on:
-      group: ubuntu-runners
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:

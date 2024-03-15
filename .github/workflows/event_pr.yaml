@@ -23,8 +23,7 @@ permissions:
 jobs:
   check_pr:
     name: Check PR
-    runs-on:
-      group: ${{ vars.RUN_GROUP }}
+    runs-on: ubuntu-latest
     permissions:
       statuses: write
     steps:
