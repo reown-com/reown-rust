@@ -54,6 +54,9 @@ jobs:
           profile: default
           override: true
 
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
       - uses: Swatinem/rust-cache@v2
 
       - uses: taiki-e/install-action@v1
