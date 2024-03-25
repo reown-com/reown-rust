@@ -35,7 +35,7 @@ jobs:
             rust: nightly
           - name: "Tests"
             cmd: nextest
-            args: run --workspace --all-features --features cacao --retries 3
+            args: run --workspace --all-features
             rust: stable
           - name: "Documentation Tests"
             cmd: test
