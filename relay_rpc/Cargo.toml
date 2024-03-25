@@ -15,6 +15,7 @@ cacao = [
     "dep:alloy-json-abi",
     "dep:alloy-sol-types",
     "dep:alloy-primitives",
+    "dep:alloy-node-bindings"
 ]
 
 [dependencies]
@@ -49,6 +50,7 @@ alloy-transport = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e
 alloy-transport-http = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1", optional = true }
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1", optional = true }
 alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1", optional = true }
+alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1", optional = true }
 alloy-json-abi = { version = "0.6.2", optional = true }
 alloy-sol-types = { version = "0.6.2", optional = true }
 alloy-primitives = { version = "0.6.2", optional = true }
