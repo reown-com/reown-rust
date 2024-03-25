@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-relay_rpc = { path = "../relay_rpc" }
+relay_rpc = { path = "../relay_rpc", features = ["cacao"] }
 reqwest = "0.11"
 serde = "1.0"
 tokio = { version = "1.0", features = ["test-util", "macros"] }
