@@ -46,10 +46,15 @@ pub async fn deploy_contract(rpc_url: &Url, private_key: &SigningKey) -> Address
         .wait_with_output()
         .await
         .unwrap();
-    let output = String::from_utf8(output.stdout).unwrap();
+    println!("forge status: {:?}", output.status);
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    println!("forge stdout: {stdout:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    println!("forge stderr: {stderr:?}");
+    assert!(output.status.success());
     let (_, [contract_address]) = Regex::new("Deployed to: (0x[0-9a-fA-F]+)")
         .unwrap()
-        .captures(&output)
+        .captures(&stdout)
         .unwrap()
         .extract();
     contract_address.parse().unwrap()
