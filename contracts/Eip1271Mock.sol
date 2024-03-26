@@ -2,7 +2,7 @@ pragma solidity ^0.8.25;
 
 // https://eips.ethereum.org/EIPS/eip-1271#reference-implementation
 
-contract TestContract {
+contract Eip1271Mock {
   address owner;
 
   constructor() {

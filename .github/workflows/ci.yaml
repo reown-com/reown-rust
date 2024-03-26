@@ -56,6 +56,10 @@ jobs:
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+      
+      # pre-build contracts to avoid race condition installing solc during `forge create` in tests
+      - name: Build contracts
+        run: forge build -C contracts --cache-path=target/.forge/cache --out=target/.forge/out
 
       - uses: Swatinem/rust-cache@v2
 
