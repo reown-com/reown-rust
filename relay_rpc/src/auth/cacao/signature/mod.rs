@@ -13,6 +13,9 @@ use {
 pub mod eip1271;
 pub mod eip191;
 
+#[cfg(test)]
+mod test_helpers;
+
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Hash)]
 pub struct Signature {
     pub t: String,
@@ -34,7 +37,11 @@ impl Signature {
         let hash = Keccak256::new_with_prefix(eip191_bytes(&cacao.siwe_message()?));
 
         match self.t.as_str() {
-            EIP191 => verify_eip191(&signature, &address, hash),
+            EIP191 => verify_eip191(
+                &signature,
+                &address.parse().map_err(CacaoError::AddressNotEip191)?,
+                hash,
+            ),
             EIP1271 => {
                 if let Some(provider) = provider {
                     let chain_id = cacao.p.chain_id_reference()?;

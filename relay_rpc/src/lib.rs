@@ -1,3 +1,5 @@
+#![deny(clippy::indexing_slicing)]
+
 //! This crate provides domain interfaces and RPC data types that are shared
 //! between services.
 
