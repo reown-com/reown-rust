@@ -41,3 +41,6 @@ required-features = ["client", "rpc"]
 [[example]]
 name = "webhook"
 required-features = ["client", "rpc"]
+
+[lints.clippy]
+indexing_slicing = "deny"

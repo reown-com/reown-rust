@@ -28,3 +28,6 @@ tokio-tungstenite = "0.20"
 futures-channel = "0.3"
 tokio-stream = "0.1"
 tokio-util = "0.7"
+
+[lints.clippy]
+indexing_slicing = "deny"

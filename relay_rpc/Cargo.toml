@@ -58,3 +58,6 @@ strum = { version = "0.26", features = ["strum_macros", "derive"] }
 
 [dev-dependencies]
 tokio = { version = "1.35.1", features = ["test-util", "macros"] }
+
+[lints.clippy]
+indexing_slicing = "deny"
