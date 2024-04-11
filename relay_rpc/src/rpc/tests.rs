@@ -180,6 +180,42 @@ fn watch_unregister() {
 }
 
 #[test]
+fn batch_request() {
+    let params = BatchRequest {
+        mode: BatchRequestMode::Sequence,
+        requests: vec![
+            Request::new(
+                2.into(),
+                Params::Subscribe(Subscribe {
+                    topic: Topic::from(
+                        "be1dc739d7499e7b3c5de6c7a18dd86d4d09d28604df200965abd368e95c7232",
+                    ),
+                }),
+            ),
+            Request::new(
+                3.into(),
+                Params::BatchRequest(BatchRequest {
+                    mode: BatchRequestMode::Concurrent,
+                    requests: vec![],
+                }),
+            ),
+        ],
+    };
+    let payload: Payload = Payload::Request(Request::new(1.into(), Params::BatchRequest(params)));
+
+    let serialized = serde_json::to_string(&payload).unwrap();
+
+    assert_eq!(
+        &serialized,
+        r#"{"id":1,"jsonrpc":"2.0","method":"irn_batchRequest","params":{"mode":"sequence","requests":[{"id":2,"jsonrpc":"2.0","method":"irn_subscribe","params":{"topic":"be1dc739d7499e7b3c5de6c7a18dd86d4d09d28604df200965abd368e95c7232"}},{"id":3,"jsonrpc":"2.0","method":"irn_batchRequest","params":{"mode":"concurrent","requests":[]}}]}}"#
+    );
+
+    let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(&payload, &deserialized)
+}
+
+#[test]
 fn deserialize_iridium_method() {
     let serialized = r#"{"id":1,"jsonrpc":"2.0","method":"iridium_subscription","params":{"id":"test_id","data":{"topic":"test_topic","message":"test_message","publishedAt":123,"tag":1000}}}"#;
     assert!(serde_json::from_str::<'_, Payload>(serialized).is_ok());

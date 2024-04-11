@@ -520,6 +520,44 @@ impl ServiceRequest for BatchReceiveMessages {
     }
 }
 
+#[derive(Debug, thiserror::Error, strum::EnumString, strum::IntoStaticStr, PartialEq, Eq)]
+pub enum BatchRequestError {
+    #[error("Other")]
+    Other,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum BatchRequestMode {
+    Sequence,
+    Concurrent,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BatchRequest {
+    pub mode: BatchRequestMode,
+    pub requests: Vec<Request>,
+}
+
+impl BatchRequest {}
+
+impl ServiceRequest for BatchRequest {
+    type Error = BatchRequestError;
+    type Response = Vec<Response>;
+
+    fn validate(&self) -> Result<(), PayloadError> {
+        for req in &self.requests {
+            req.validate()?;
+        }
+
+        Ok(())
+    }
+
+    fn into_params(self) -> Params {
+        Params::BatchRequest(self)
+    }
+}
+
 /// Data structure representing publish request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Publish {
@@ -786,6 +824,9 @@ pub enum Params {
     )]
     BatchFetchMessages(BatchFetchMessages),
 
+    #[serde(rename = "irn_batchRequest", alias = "iridium_batchRequest")]
+    BatchRequest(BatchRequest),
+
     /// Parameters to publish.
     #[serde(rename = "irn_publish", alias = "iridium_publish")]
     Publish(Publish),
@@ -853,6 +894,7 @@ impl Request {
             Params::BatchSubscribeBlocking(params) => params.validate(),
             Params::BatchUnsubscribe(params) => params.validate(),
             Params::BatchFetchMessages(params) => params.validate(),
+            Params::BatchRequest(params) => params.validate(),
             Params::Publish(params) => params.validate(),
             Params::BatchReceiveMessages(params) => params.validate(),
             Params::WatchRegister(params) => params.validate(),
