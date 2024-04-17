@@ -56,8 +56,13 @@ pub async fn verify_eip1271(
         }
     })?;
 
-    if result[..4] == MAGIC_VALUE.to_be_bytes().to_vec() {
-        Ok(true)
+    let magic = result.get(..4);
+    if let Some(magic) = magic {
+        if magic == MAGIC_VALUE.to_be_bytes().to_vec() {
+            Ok(true)
+        } else {
+            Err(CacaoError::Verification)
+        }
     } else {
         Err(CacaoError::Verification)
     }
@@ -67,8 +72,13 @@ pub async fn verify_eip1271(
 mod test {
     use {
         super::*,
-        crate::auth::cacao::signature::{eip191::eip191_bytes, strip_hex_prefix},
+        crate::auth::cacao::signature::{
+            eip191::eip191_bytes,
+            strip_hex_prefix,
+            test_helpers::{deploy_contract, message_hash, sign_message, spawn_anvil},
+        },
         alloy_primitives::address,
+        k256::ecdsa::SigningKey,
         sha3::{Digest, Keccak256},
     };
 
@@ -76,7 +86,7 @@ mod test {
     // function
     #[tokio::test]
     #[ignore]
-    async fn test_eip1271() {
+    async fn test_eip1271_manual() {
         let address = address!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
         let signature = "xxx";
         let signature = data_encoding::HEXLOWER_PERMISSIVE
@@ -93,5 +103,90 @@ mod test {
         assert!(verify_eip1271(signature, address, hash, provider)
             .await
             .unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_eip1271_pass() {
+        let (_anvil, rpc_url, private_key) = spawn_anvil().await;
+        let contract_address = deploy_contract(&rpc_url, &private_key).await;
+
+        let message = "xxx";
+        let signature = sign_message(message, &private_key);
+
+        assert!(
+            verify_eip1271(signature, contract_address, &message_hash(message), rpc_url)
+                .await
+                .unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_eip1271_wrong_signature() {
+        let (_anvil, rpc_url, private_key) = spawn_anvil().await;
+        let contract_address = deploy_contract(&rpc_url, &private_key).await;
+
+        let message = "xxx";
+        let mut signature = sign_message(message, &private_key);
+        *signature.first_mut().unwrap() = signature.first().unwrap().wrapping_add(1);
+
+        assert!(matches!(
+            verify_eip1271(signature, contract_address, &message_hash(message), rpc_url).await,
+            Err(CacaoError::Verification)
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_eip1271_fail_wrong_signer() {
+        let (anvil, rpc_url, private_key) = spawn_anvil().await;
+        let contract_address = deploy_contract(&rpc_url, &private_key).await;
+
+        let message = "xxx";
+        let signature = sign_message(
+            message,
+            &SigningKey::from_bytes(&anvil.keys().get(1).unwrap().to_bytes()).unwrap(),
+        );
+
+        assert!(matches!(
+            verify_eip1271(signature, contract_address, &message_hash(message), rpc_url).await,
+            Err(CacaoError::Verification)
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_eip1271_fail_wrong_contract_address() {
+        let (_anvil, rpc_url, private_key) = spawn_anvil().await;
+        let mut contract_address = deploy_contract(&rpc_url, &private_key).await;
+
+        *contract_address.0.first_mut().unwrap() =
+            contract_address.0.first().unwrap().wrapping_add(1);
+
+        let message = "xxx";
+        let signature = sign_message(message, &private_key);
+
+        assert!(matches!(
+            verify_eip1271(signature, contract_address, &message_hash(message), rpc_url).await,
+            Err(CacaoError::Verification)
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_eip1271_wrong_message() {
+        let (_anvil, rpc_url, private_key) = spawn_anvil().await;
+        let contract_address = deploy_contract(&rpc_url, &private_key).await;
+
+        let message = "xxx";
+        let signature = sign_message(message, &private_key);
+
+        let message2 = "yyy";
+        assert!(matches!(
+            verify_eip1271(
+                signature,
+                contract_address,
+                &message_hash(message2),
+                rpc_url
+            )
+            .await,
+            Err(CacaoError::Verification)
+        ));
     }
 }

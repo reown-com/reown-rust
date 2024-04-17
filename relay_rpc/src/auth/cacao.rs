@@ -4,6 +4,7 @@ use {
         payload::Payload,
         signature::{eip1271::get_rpc_url::GetRpcUrl, Signature},
     },
+    alloy_primitives::hex::FromHexError,
     core::fmt::Debug,
     serde::{Deserialize, Serialize},
     serde_json::value::RawValue,
@@ -31,6 +32,9 @@ pub enum CacaoError {
 
     #[error("Invalid address")]
     AddressInvalid,
+
+    #[error("Address not EIP-191")]
+    AddressNotEip191(FromHexError),
 
     #[error("EIP-1271 signatures not supported")]
     Eip1271NotSupported,

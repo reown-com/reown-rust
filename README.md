@@ -15,6 +15,10 @@ The core Relay client. Provides access to all available Relay RPC methods to bui
 
 Provides all of the Relay domain types (e.g. `ClientId`, `ProjectId` etc.) as well as auth token generation and validation functionality.
 
+### Test dependencies
+
+Foundry is required to be installed to your system for testing: <https://book.getfoundry.sh/getting-started/installation>
+
 # License
 
 [Apache License (Version 2.0)](LICENSE)

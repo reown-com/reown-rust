@@ -149,12 +149,17 @@ pub trait VerifyableClaims: Serialize + DeserializeOwned {
 
         // Decode header.
         data_encoding::BASE64URL_NOPAD
-            .decode_mut(header.as_bytes(), &mut output[..header_len])
+            .decode_mut(
+                header.as_bytes(),
+                output.get_mut(..header_len).ok_or(JwtError::Encoding)?,
+            )
             .map_err(|_| JwtError::Encoding)?;
 
         {
-            let header = serde_json::from_slice::<JwtHeader>(&output[..header_len])
-                .map_err(JwtError::Serialization)?;
+            let header = serde_json::from_slice::<JwtHeader>(
+                output.get(..header_len).ok_or(JwtError::Encoding)?,
+            )
+            .map_err(JwtError::Serialization)?;
 
             if !header.is_valid() {
                 return Err(JwtError::Header);
@@ -163,11 +168,15 @@ pub trait VerifyableClaims: Serialize + DeserializeOwned {
 
         // Decode claims.
         data_encoding::BASE64URL_NOPAD
-            .decode_mut(claims.as_bytes(), &mut output[..claims_len])
+            .decode_mut(
+                claims.as_bytes(),
+                output.get_mut(..claims_len).ok_or(JwtError::Encoding)?,
+            )
             .map_err(|_| JwtError::Encoding)?;
 
-        let claims = serde_json::from_slice::<Self>(&output[..claims_len])
-            .map_err(JwtError::Serialization)?;
+        let claims =
+            serde_json::from_slice::<Self>(output.get(..claims_len).ok_or(JwtError::Encoding)?)
+                .map_err(JwtError::Serialization)?;
 
         let mut parts = data.rsplitn(2, JWT_DELIMITER);
 

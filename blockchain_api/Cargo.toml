@@ -4,9 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-relay_rpc = { path = "../relay_rpc" }
+relay_rpc = { path = "../relay_rpc", features = ["cacao"] }
 reqwest = { version = "0.12.2", features = ["json"] }
 serde = "1.0"
 tokio = { version = "1.0", features = ["test-util", "macros"] }
 tracing = "0.1.40"
 url = "2"
+
+[lints.clippy]
+indexing_slicing = "deny"
