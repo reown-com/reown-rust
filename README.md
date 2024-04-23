@@ -15,6 +15,15 @@ The core Relay client. Provides access to all available Relay RPC methods to bui
 
 Provides all of the Relay domain types (e.g. `ClientId`, `ProjectId` etc.) as well as auth token generation and validation functionality.
 
+### `cacao` feature
+
+To aid IDE integration you may want to add this to your local `relay_rpc/Cargo.toml` file:
+
+```toml
+[features]
+default = ["cacao"]
+```
+
 ### Test dependencies
 
 Foundry is required to be installed to your system for testing: <https://book.getfoundry.sh/getting-started/installation>

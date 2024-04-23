@@ -4,9 +4,11 @@ use {
 };
 
 fn main() {
-    println!("cargo::rerun-if-changed=contracts/");
+    println!("cargo::rerun-if-changed=relay_rpc/contracts/");
+    #[cfg(feature = "cacao")]
     compile_contracts();
 
+    #[cfg(feature = "cacao")]
     extract_eip6492_bytecode();
 }
 
@@ -14,7 +16,7 @@ fn compile_contracts() {
     let output = Command::new("forge")
         .args([
             "build",
-            "--contracts=contracts",
+            "--contracts=relay_rpc/contracts",
             "--cache-path",
             "target/.forge/cache",
             "--out",
@@ -35,9 +37,9 @@ fn compile_contracts() {
 }
 
 fn extract_eip6492_bytecode() {
-    const EIP6492_FILE: &str = "target/.forge/out/Eip6492.sol/ValidateSigOffchain.json";
+    const EIP6492_FILE: &str = "../target/.forge/out/Eip6492.sol/ValidateSigOffchain.json";
     const EIP6492_BYTECODE_FILE: &str =
-        "target/.forge/out/Eip6492.sol/ValidateSigOffchain.bytecode";
+        "../target/.forge/out/Eip6492.sol/ValidateSigOffchain.bytecode";
 
     let contents = serde_json::from_slice::<Value>(&std::fs::read(EIP6492_FILE).unwrap()).unwrap();
     let bytecode = contents

@@ -27,7 +27,7 @@ pub async fn deploy_contract(rpc_url: &Url, private_key: &SigningKey) -> Address
     let output = Command::new("forge")
         .args([
             "create",
-            "--contracts=contracts",
+            "--contracts=relay_rpc/contracts",
             "Eip1271Mock",
             "--rpc-url",
             rpc_url.as_str(),
