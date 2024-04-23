@@ -1,7 +1,8 @@
 use {
     self::{
-        eip1271::{get_rpc_url::GetRpcUrl, verify_eip1271, EIP1271},
+        eip1271::{verify_eip1271, EIP1271},
         eip191::{eip191_bytes, verify_eip191, EIP191},
+        get_rpc_url::GetRpcUrl,
     },
     super::{Cacao, CacaoError},
     alloy_primitives::Address,
@@ -12,6 +13,8 @@ use {
 
 pub mod eip1271;
 pub mod eip191;
+pub mod eip6492;
+pub mod get_rpc_url;
 
 #[cfg(test)]
 mod test_helpers;
@@ -27,7 +30,7 @@ impl Signature {
         &self,
         cacao: &Cacao,
         provider: Option<&impl GetRpcUrl>,
-    ) -> Result<bool, CacaoError> {
+    ) -> Result<(), CacaoError> {
         let address = cacao.p.address()?;
 
         let signature = data_encoding::HEXLOWER_PERMISSIVE

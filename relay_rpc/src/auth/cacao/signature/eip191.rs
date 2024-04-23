@@ -20,7 +20,7 @@ pub fn verify_eip191(
     signature: &[u8],
     address: &Address,
     hash: Keccak256,
-) -> Result<bool, CacaoError> {
+) -> Result<(), CacaoError> {
     use k256::ecdsa::{RecoveryId, Signature as Sig, VerifyingKey};
 
     let sig = Sig::try_from(signature.get(..64).ok_or(CacaoError::Verification)?)
@@ -47,7 +47,7 @@ pub fn verify_eip191(
     if address_encoded.to_lowercase() != strip_hex_prefix(&address.to_string()).to_lowercase() {
         Err(CacaoError::Verification)
     } else {
-        Ok(true)
+        Ok(())
     }
 }
 
@@ -68,7 +68,7 @@ mod tests {
         let message = "xxx";
         let signature = sign_message(message, &private_key);
         let address = Address::from_private_key(&private_key);
-        assert!(verify_eip191(&signature, &address, message_hash_internal(message)).unwrap());
+        verify_eip191(&signature, &address, message_hash_internal(message)).unwrap();
     }
 
     #[test]

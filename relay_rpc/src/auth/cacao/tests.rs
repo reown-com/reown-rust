@@ -1,4 +1,4 @@
-use {super::signature::eip1271::get_rpc_url::GetRpcUrl, crate::auth::cacao::Cacao, url::Url};
+use {super::signature::get_rpc_url::GetRpcUrl, crate::auth::cacao::Cacao, url::Url};
 
 struct MockGetRpcUrl;
 
@@ -34,7 +34,6 @@ async fn cacao_verify_success() {
     let cacao: Cacao = serde_json::from_str(cacao_serialized).unwrap();
     let result = cacao.verify(Some(&MockGetRpcUrl)).await;
     assert!(result.is_ok());
-    assert!(result.map_err(|_| false).unwrap());
 
     let identity_key = cacao.p.identity_key();
     assert!(identity_key.is_ok());
@@ -71,7 +70,6 @@ async fn cacao_verify_success_identity_in_audience() {
     let cacao: Cacao = serde_json::from_str(cacao_serialized).unwrap();
     let result = cacao.verify(Some(&MockGetRpcUrl)).await;
     assert!(result.is_ok());
-    assert!(result.map_err(|_| false).unwrap());
 
     let identity_key = cacao.p.identity_key();
     assert!(identity_key.is_ok());

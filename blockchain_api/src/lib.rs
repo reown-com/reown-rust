@@ -1,6 +1,6 @@
 pub use reqwest::Error;
 use {
-    relay_rpc::{auth::cacao::signature::eip1271::get_rpc_url::GetRpcUrl, domain::ProjectId},
+    relay_rpc::{auth::cacao::signature::get_rpc_url::GetRpcUrl, domain::ProjectId},
     serde::Deserialize,
     std::{collections::HashSet, convert::Infallible, sync::Arc, time::Duration},
     tokio::{sync::RwLock, task::JoinHandle},

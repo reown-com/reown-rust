@@ -1,14 +1,11 @@
 use {
     super::CacaoError,
-    alloy_primitives::{Address, FixedBytes},
-    alloy_providers::provider::{Provider, TempProvider},
-    alloy_rpc_types::{CallInput, CallRequest},
+    alloy_primitives::Address,
+    alloy_provider::{network::Ethereum, Provider, ReqwestProvider},
+    alloy_rpc_types::{TransactionInput, TransactionRequest},
     alloy_sol_types::{sol, SolCall},
-    alloy_transport_http::Http,
     url::Url,
 };
-
-pub mod get_rpc_url;
 
 pub const EIP1271: &str = "eip1271";
 
@@ -28,38 +25,39 @@ pub async fn verify_eip1271(
     address: Address,
     hash: &[u8; 32],
     provider: Url,
-) -> Result<bool, CacaoError> {
-    let provider = Provider::new(Http::new(provider));
+) -> Result<(), CacaoError> {
+    let provider = ReqwestProvider::<Ethereum>::new_http(provider);
 
-    let call_request = CallRequest {
-        to: Some(address),
-        input: CallInput::new(
+    let call_request = TransactionRequest::default()
+        .to(address)
+        .input(TransactionInput::new(
             isValidSignatureCall {
-                _hash: FixedBytes::from(hash),
-                _signature: signature,
+                _hash: hash.into(),
+                _signature: signature.into(),
             }
             .abi_encode()
             .into(),
-        ),
-        ..Default::default()
-    };
+        ));
 
-    let result = provider.call(call_request, None).await.map_err(|e| {
-        if let Some(error_response) = e.as_error_resp() {
-            if error_response.message.starts_with("execution reverted:") {
-                CacaoError::Verification
+    let result = provider
+        .call(&call_request, Default::default())
+        .await
+        .map_err(|e| {
+            if let Some(error_response) = e.as_error_resp() {
+                if error_response.message.starts_with("execution reverted:") {
+                    CacaoError::Verification
+                } else {
+                    CacaoError::Eip1271Internal(e)
+                }
             } else {
                 CacaoError::Eip1271Internal(e)
             }
-        } else {
-            CacaoError::Eip1271Internal(e)
-        }
-    })?;
+        })?;
 
     let magic = result.get(..4);
     if let Some(magic) = magic {
         if magic == MAGIC_VALUE.to_be_bytes().to_vec() {
-            Ok(true)
+            Ok(())
         } else {
             Err(CacaoError::Verification)
         }
@@ -100,9 +98,9 @@ mod test {
         let provider = "https://rpc.walletconnect.com/v1?chainId=eip155:1&projectId=xxx"
             .parse()
             .unwrap();
-        assert!(verify_eip1271(signature, address, hash, provider)
+        verify_eip1271(signature, address, hash, provider)
             .await
-            .unwrap());
+            .unwrap();
     }
 
     #[tokio::test]
@@ -113,11 +111,9 @@ mod test {
         let message = "xxx";
         let signature = sign_message(message, &private_key);
 
-        assert!(
-            verify_eip1271(signature, contract_address, &message_hash(message), rpc_url)
-                .await
-                .unwrap()
-        );
+        verify_eip1271(signature, contract_address, &message_hash(message), rpc_url)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
