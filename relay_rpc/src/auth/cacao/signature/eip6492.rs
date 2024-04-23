@@ -46,7 +46,8 @@ pub async fn verify_eip6492(
     let result = provider
         .call(&call_request, Default::default())
         .await
-        .map_err(CacaoError::Eip1271Internal)?;
+        .map_err(CacaoError::Eip6492Internal)?;
+
     let magic = result.first();
     if let Some(magic) = magic {
         if magic == &MAGIC_VALUE {
