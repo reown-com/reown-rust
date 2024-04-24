@@ -43,7 +43,17 @@ pub async fn verify_eip6492(
     let result = provider
         .call(&transaction_request, Default::default())
         .await
-        .map_err(CacaoError::Eip6492Internal)?;
+        .map_err(|e| {
+            if let Some(error_response) = e.as_error_resp() {
+                if error_response.message == "execution reverted" {
+                    CacaoError::Verification
+                } else {
+                    CacaoError::Eip6492Internal(e)
+                }
+            } else {
+                CacaoError::Eip6492Internal(e)
+            }
+        })?;
 
     let magic = result.first();
     if let Some(magic) = magic {
@@ -387,7 +397,6 @@ mod test {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_eip6492_fail_wrong_contract_address() {
         let (_anvil, rpc_url, private_key) = spawn_anvil().await;
         let create2_factory_address =
@@ -409,7 +418,7 @@ mod test {
                 signature,
                 predeploy_address,
                 &message_hash(message),
-                rpc_url
+                rpc_url,
             )
             .await,
             Err(CacaoError::Verification)
