@@ -3,10 +3,10 @@ pragma solidity ^0.8.25;
 // https://eips.ethereum.org/EIPS/eip-1271#reference-implementation
 
 contract Eip1271Mock {
-  address owner;
+  address owner_eoa;
 
-  constructor() {
-    owner = msg.sender;
+  constructor(address _owner_eoa) {
+    owner_eoa = _owner_eoa;
   }
 
   /**
@@ -17,7 +17,7 @@ contract Eip1271Mock {
     bytes calldata _signature
   ) external view returns (bytes4) {
     // Validate signatures
-    if (recoverSigner(_hash, _signature) == owner) {
+    if (recoverSigner(_hash, _signature) == owner_eoa) {
       return 0x1626ba7e;
     } else {
       return 0xffffffff;

@@ -9,7 +9,7 @@ fn main() {
     compile_contracts();
 
     #[cfg(feature = "cacao")]
-    extract_eip6492_bytecode();
+    extract_bytecodes();
 }
 
 fn compile_contracts() {
@@ -36,12 +36,18 @@ fn compile_contracts() {
     assert!(output.status.success());
 }
 
-fn extract_eip6492_bytecode() {
-    const EIP6492_FILE: &str = "../target/.forge/out/Eip6492.sol/ValidateSigOffchain.json";
-    const EIP6492_BYTECODE_FILE: &str =
-        "../target/.forge/out/Eip6492.sol/ValidateSigOffchain.bytecode";
+const EIP6492_FILE: &str = "../target/.forge/out/Eip6492.sol/ValidateSigOffchain.json";
+const EIP6492_BYTECODE_FILE: &str = "../target/.forge/out/Eip6492.sol/ValidateSigOffchain.bytecode";
+const EIP1271_MOCK_FILE: &str = "../target/.forge/out/Eip1271Mock.sol/Eip1271Mock.json";
+const EIP1271_MOCK_BYTECODE_FILE: &str =
+    "../target/.forge/out/Eip1271Mock.sol/Eip1271Mock.bytecode";
+fn extract_bytecodes() {
+    extract_bytecode(EIP6492_FILE, EIP6492_BYTECODE_FILE);
+    extract_bytecode(EIP1271_MOCK_FILE, EIP1271_MOCK_BYTECODE_FILE);
+}
 
-    let contents = serde_json::from_slice::<Value>(&std::fs::read(EIP6492_FILE).unwrap()).unwrap();
+fn extract_bytecode(input_file: &str, output_file: &str) {
+    let contents = serde_json::from_slice::<Value>(&std::fs::read(input_file).unwrap()).unwrap();
     let bytecode = contents
         .get("bytecode")
         .unwrap()
@@ -52,5 +58,5 @@ fn extract_eip6492_bytecode() {
         .strip_prefix("0x")
         .unwrap();
     let bytecode = hex::decode(bytecode).unwrap();
-    std::fs::write(EIP6492_BYTECODE_FILE, bytecode).unwrap();
+    std::fs::write(output_file, bytecode).unwrap();
 }

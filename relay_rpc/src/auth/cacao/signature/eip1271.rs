@@ -73,7 +73,13 @@ mod test {
         crate::auth::cacao::signature::{
             eip191::eip191_bytes,
             strip_hex_prefix,
-            test_helpers::{deploy_contract, message_hash, sign_message, spawn_anvil},
+            test_helpers::{
+                deploy_contract,
+                message_hash,
+                sign_message,
+                spawn_anvil,
+                EIP1271_MOCK_CONTRACT,
+            },
         },
         alloy_primitives::address,
         k256::ecdsa::SigningKey,
@@ -106,7 +112,13 @@ mod test {
     #[tokio::test]
     async fn test_eip1271_pass() {
         let (_anvil, rpc_url, private_key) = spawn_anvil().await;
-        let contract_address = deploy_contract(&rpc_url, &private_key).await;
+        let contract_address = deploy_contract(
+            &rpc_url,
+            &private_key,
+            EIP1271_MOCK_CONTRACT,
+            Some(&Address::from_private_key(&private_key).to_string()),
+        )
+        .await;
 
         let message = "xxx";
         let signature = sign_message(message, &private_key);
@@ -119,7 +131,13 @@ mod test {
     #[tokio::test]
     async fn test_eip1271_wrong_signature() {
         let (_anvil, rpc_url, private_key) = spawn_anvil().await;
-        let contract_address = deploy_contract(&rpc_url, &private_key).await;
+        let contract_address = deploy_contract(
+            &rpc_url,
+            &private_key,
+            EIP1271_MOCK_CONTRACT,
+            Some(&Address::from_private_key(&private_key).to_string()),
+        )
+        .await;
 
         let message = "xxx";
         let mut signature = sign_message(message, &private_key);
@@ -134,7 +152,13 @@ mod test {
     #[tokio::test]
     async fn test_eip1271_fail_wrong_signer() {
         let (anvil, rpc_url, private_key) = spawn_anvil().await;
-        let contract_address = deploy_contract(&rpc_url, &private_key).await;
+        let contract_address = deploy_contract(
+            &rpc_url,
+            &private_key,
+            EIP1271_MOCK_CONTRACT,
+            Some(&Address::from_private_key(&private_key).to_string()),
+        )
+        .await;
 
         let message = "xxx";
         let signature = sign_message(
@@ -151,7 +175,13 @@ mod test {
     #[tokio::test]
     async fn test_eip1271_fail_wrong_contract_address() {
         let (_anvil, rpc_url, private_key) = spawn_anvil().await;
-        let mut contract_address = deploy_contract(&rpc_url, &private_key).await;
+        let mut contract_address = deploy_contract(
+            &rpc_url,
+            &private_key,
+            EIP1271_MOCK_CONTRACT,
+            Some(&Address::from_private_key(&private_key).to_string()),
+        )
+        .await;
 
         *contract_address.0.first_mut().unwrap() =
             contract_address.0.first().unwrap().wrapping_add(1);
@@ -168,7 +198,13 @@ mod test {
     #[tokio::test]
     async fn test_eip1271_wrong_message() {
         let (_anvil, rpc_url, private_key) = spawn_anvil().await;
-        let contract_address = deploy_contract(&rpc_url, &private_key).await;
+        let contract_address = deploy_contract(
+            &rpc_url,
+            &private_key,
+            EIP1271_MOCK_CONTRACT,
+            Some(&Address::from_private_key(&private_key).to_string()),
+        )
+        .await;
 
         let message = "xxx";
         let signature = sign_message(message, &private_key);
