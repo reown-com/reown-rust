@@ -10,7 +10,7 @@ fn main() {
 
 fn build_contracts() {
     println!("cargo::rerun-if-changed=contracts");
-    install_foundary();
+    install_foundry();
     compile_contracts();
     extract_bytecodes();
 }
@@ -23,7 +23,7 @@ fn format_foundry_dir(path: &str) -> String {
     )
 }
 
-fn install_foundary() {
+fn install_foundry() {
     let bin_folder = format_foundry_dir("bin");
     std::fs::remove_dir_all(&bin_folder).ok();
     std::fs::create_dir_all(&bin_folder).unwrap();
