@@ -39,6 +39,9 @@ pub enum CacaoError {
     #[error("EIP-1271 signatures not supported")]
     Eip1271NotSupported,
 
+    #[error("EIP-6492 signatures not supported")]
+    Eip6492NotSupported,
+
     #[error("Unsupported signature type")]
     UnsupportedSignature,
 
