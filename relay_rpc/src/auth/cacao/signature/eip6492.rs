@@ -16,8 +16,9 @@ sol! {
     constructor (address _signer, bytes32 _hash, bytes memory _signature);
   }
 }
-const VALIDATE_SIG_OFFCHAIN_BYTECODE: &[u8] =
-    include_bytes!("../../../../../target/.forge/out/Eip6492.sol/ValidateSigOffchain.bytecode");
+const VALIDATE_SIG_OFFCHAIN_BYTECODE: &[u8] = include_bytes!(
+    "../../../../../target/.foundry/forge/out/Eip6492.sol/ValidateSigOffchain.bytecode"
+);
 
 pub async fn verify_eip6492(
     signature: Vec<u8>,
@@ -258,8 +259,9 @@ mod test {
         ));
     }
 
-    const EIP1271_MOCK_BYTECODE: &[u8] =
-        include_bytes!("../../../../../target/.forge/out/Eip1271Mock.sol/Eip1271Mock.bytecode");
+    const EIP1271_MOCK_BYTECODE: &[u8] = include_bytes!(
+        "../../../../../target/.foundry/forge/out/Eip1271Mock.sol/Eip1271Mock.bytecode"
+    );
     const EIP6492_MAGIC_BYTES: [u16; 16] = [
         0x6492, 0x6492, 0x6492, 0x6492, 0x6492, 0x6492, 0x6492, 0x6492, 0x6492, 0x6492, 0x6492,
         0x6492, 0x6492, 0x6492, 0x6492, 0x6492,

@@ -11,8 +11,16 @@ use {
     url::Url,
 };
 
+fn format_foundry_dir(path: &str) -> String {
+    format!(
+        "{}/../../../../.foundry/{}",
+        std::env::var("OUT_DIR").unwrap(),
+        path
+    )
+}
+
 pub async fn spawn_anvil() -> (AnvilInstance, Url, SigningKey) {
-    let anvil = Anvil::new().spawn();
+    let anvil = Anvil::at(format_foundry_dir("bin/anvil")).spawn();
     let provider = anvil.endpoint().parse().unwrap();
     let private_key = anvil.keys().first().unwrap().clone();
     (
@@ -32,6 +40,8 @@ pub async fn deploy_contract(
     constructor_arg: Option<&str>,
 ) -> Address {
     let key_encoded = data_encoding::HEXLOWER_PERMISSIVE.encode(&private_key.to_bytes());
+    let cache_folder = format_foundry_dir("forge/cache");
+    let out_folder = format_foundry_dir("forge/out");
     let mut args = vec![
         "create",
         "--contracts=relay_rpc/contracts",
@@ -41,15 +51,15 @@ pub async fn deploy_contract(
         "--private-key",
         &key_encoded,
         "--cache-path",
-        "target/.forge/cache",
+        &cache_folder,
         "--out",
-        "target/.forge/out",
+        &out_folder,
     ];
     if let Some(arg) = constructor_arg {
         args.push("--constructor-args");
         args.push(arg);
     }
-    let output = Command::new("forge")
+    let output = Command::new(format_foundry_dir("bin/forge"))
         .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

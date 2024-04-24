@@ -24,10 +24,6 @@ To aid IDE integration you may want to add this to your local `relay_rpc/Cargo.t
 default = ["cacao"]
 ```
 
-### Test dependencies
-
-Foundry is required to be installed to your system for testing: <https://book.getfoundry.sh/getting-started/installation>
-
 # License
 
 [Apache License (Version 2.0)](LICENSE)
