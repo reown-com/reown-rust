@@ -73,18 +73,42 @@ pub async fn verify_eip6492(
 mod test {
     use {
         super::*,
-        crate::auth::cacao::signature::test_helpers::{
-            deploy_contract,
-            message_hash,
-            sign_message,
-            spawn_anvil,
-            CREATE2_CONTRACT,
-            EIP1271_MOCK_CONTRACT,
+        crate::auth::cacao::signature::{
+            strip_hex_prefix,
+            test_helpers::{
+                deploy_contract,
+                message_hash,
+                sign_message,
+                spawn_anvil,
+                CREATE2_CONTRACT,
+                EIP1271_MOCK_CONTRACT,
+            },
         },
-        alloy_primitives::{b256, Uint},
+        alloy_primitives::{address, b256, Uint},
         alloy_sol_types::{SolCall, SolValue},
         k256::ecdsa::SigningKey,
     };
+
+    // Manual test. Paste address, signature, message, and project ID to verify
+    // function
+    #[tokio::test]
+    #[ignore]
+    async fn test_eip6492_manual() {
+        let address = address!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        let message = "xxx";
+        let signature = "xxx";
+
+        let signature = data_encoding::HEXLOWER_PERMISSIVE
+            .decode(strip_hex_prefix(signature).as_bytes())
+            .map_err(|_| CacaoError::Verification)
+            .unwrap();
+        let provider = "https://rpc.walletconnect.com/v1?chainId=eip155:1&projectId=xxx"
+            .parse()
+            .unwrap();
+        verify_eip6492(signature, address, &message_hash(message), provider)
+            .await
+            .unwrap();
+    }
 
     #[tokio::test]
     async fn test_eip191_pass() {
