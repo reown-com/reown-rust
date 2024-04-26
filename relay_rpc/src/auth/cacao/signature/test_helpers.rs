@@ -11,8 +11,16 @@ use {
     url::Url,
 };
 
+fn format_foundry_dir(path: &str) -> String {
+    format!(
+        "{}/../../../../.foundry/{}",
+        std::env::var("OUT_DIR").unwrap(),
+        path
+    )
+}
+
 pub async fn spawn_anvil() -> (AnvilInstance, Url, SigningKey) {
-    let anvil = Anvil::new().spawn();
+    let anvil = Anvil::at(format_foundry_dir("bin/anvil")).spawn();
     let provider = anvil.endpoint().parse().unwrap();
     let private_key = anvil.keys().first().unwrap().clone();
     (
@@ -22,22 +30,37 @@ pub async fn spawn_anvil() -> (AnvilInstance, Url, SigningKey) {
     )
 }
 
-pub async fn deploy_contract(rpc_url: &Url, private_key: &SigningKey) -> Address {
+pub const EIP1271_MOCK_CONTRACT: &str = "Eip1271Mock";
+pub const CREATE2_CONTRACT: &str = "Create2";
+
+pub async fn deploy_contract(
+    rpc_url: &Url,
+    private_key: &SigningKey,
+    contract_name: &str,
+    constructor_arg: Option<&str>,
+) -> Address {
     let key_encoded = data_encoding::HEXLOWER_PERMISSIVE.encode(&private_key.to_bytes());
-    let output = Command::new("forge")
-        .args([
-            "create",
-            "--contracts=contracts",
-            "Eip1271Mock",
-            "--rpc-url",
-            rpc_url.as_str(),
-            "--private-key",
-            &key_encoded,
-            "--cache-path",
-            "target/.forge/cache",
-            "--out",
-            "target/.forge/out",
-        ])
+    let cache_folder = format_foundry_dir("forge/cache");
+    let out_folder = format_foundry_dir("forge/out");
+    let mut args = vec![
+        "create",
+        "--contracts=relay_rpc/contracts",
+        contract_name,
+        "--rpc-url",
+        rpc_url.as_str(),
+        "--private-key",
+        &key_encoded,
+        "--cache-path",
+        &cache_folder,
+        "--out",
+        &out_folder,
+    ];
+    if let Some(arg) = constructor_arg {
+        args.push("--constructor-args");
+        args.push(arg);
+    }
+    let output = Command::new(format_foundry_dir("bin/forge"))
+        .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()

@@ -2,7 +2,7 @@ use {
     self::{
         header::Header,
         payload::Payload,
-        signature::{eip1271::get_rpc_url::GetRpcUrl, Signature},
+        signature::{get_rpc_url::GetRpcUrl, Signature},
     },
     alloy_primitives::hex::FromHexError,
     core::fmt::Debug,
@@ -39,6 +39,9 @@ pub enum CacaoError {
     #[error("EIP-1271 signatures not supported")]
     Eip1271NotSupported,
 
+    #[error("EIP-6492 signatures not supported")]
+    Eip6492NotSupported,
+
     #[error("Unsupported signature type")]
     UnsupportedSignature,
 
@@ -50,6 +53,9 @@ pub enum CacaoError {
 
     #[error("Internal EIP-1271 resolution error: {0}")]
     Eip1271Internal(alloy_json_rpc::RpcError<alloy_transport::TransportErrorKind, Box<RawValue>>),
+
+    #[error("Internal EIP-6492 resolution error: {0}")]
+    Eip6492Internal(alloy_json_rpc::RpcError<alloy_transport::TransportErrorKind, Box<RawValue>>),
 }
 
 impl From<std::fmt::Error> for CacaoError {
@@ -101,7 +107,7 @@ pub struct Cacao {
 impl Cacao {
     const ETHEREUM: &'static str = "Ethereum";
 
-    pub async fn verify(&self, provider: Option<&impl GetRpcUrl>) -> Result<bool, CacaoError> {
+    pub async fn verify(&self, provider: Option<&impl GetRpcUrl>) -> Result<(), CacaoError> {
         self.p.validate()?;
         self.h.validate()?;
         self.s.verify(self, provider).await

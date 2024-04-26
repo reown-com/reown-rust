@@ -8,7 +8,7 @@ license = "Apache-2.0"
 cacao = [
     "dep:k256",
     "dep:sha3",
-    "dep:alloy-providers",
+    "dep:alloy-provider",
     "dep:alloy-transport",
     "dep:alloy-transport-http",
     "dep:alloy-rpc-types",
@@ -16,7 +16,8 @@ cacao = [
     "dep:alloy-json-abi",
     "dep:alloy-sol-types",
     "dep:alloy-primitives",
-    "dep:alloy-node-bindings"
+    "dep:alloy-node-bindings",
+    "dep:alloy-contract"
 ]
 
 [dependencies]
@@ -45,19 +46,24 @@ k256 = { version = "0.13", optional = true }
 sha3 = { version = "0.10", optional = true }
 sha2 = { version = "0.10.6" }
 url = "2"
-alloy-providers = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1", optional = true }
-alloy-transport = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1", optional = true }
-alloy-transport-http = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1", optional = true }
-alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1", optional = true }
-alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1", optional = true }
-alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy.git", rev = "e6f98e1", optional = true }
-alloy-json-abi = { version = "0.6.2", optional = true }
-alloy-sol-types = { version = "0.6.2", optional = true }
-alloy-primitives = { version = "0.6.2", optional = true }
+alloy-provider = { git = "https://github.com/alloy-rs/alloy.git", rev = "d68a6b7", optional = true }
+alloy-transport = { git = "https://github.com/alloy-rs/alloy.git", rev = "d68a6b7", optional = true }
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy.git", rev = "d68a6b7", optional = true }
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy.git", rev = "d68a6b7", optional = true }
+alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy.git", rev = "d68a6b7", optional = true }
+alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy.git", rev = "d68a6b7", optional = true }
+alloy-contract = { git = "https://github.com/alloy-rs/alloy.git", rev = "d68a6b7", optional = true }
+alloy-json-abi = { version = "0.7.0", optional = true }
+alloy-sol-types = { version = "0.7.0", optional = true }
+alloy-primitives = { version = "0.7.0", optional = true }
 strum = { version = "0.26", features = ["strum_macros", "derive"] }
 
 [dev-dependencies]
 tokio = { version = "1.35.1", features = ["test-util", "macros"] }
+
+[build-dependencies]
+serde_json = "1.0"
+hex = "0.4.3"
 
 [lints.clippy]
 indexing_slicing = "deny"
