@@ -2,6 +2,7 @@
 name = "blockchain_api"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
 relay_rpc = { path = "../relay_rpc", features = ["cacao"] }
