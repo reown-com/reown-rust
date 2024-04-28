@@ -4,7 +4,7 @@ use {
         get_rpc_url::GetRpcUrl,
     },
     super::{Cacao, CacaoError},
-    alloy_primitives::{eip191_hash_message, hex::FromHex, Address, Bytes},
+    alloy_primitives::{hex::FromHex, Address, Bytes},
     alloy_provider::{network::Ethereum, ReqwestProvider},
     erc6492::verify_signature,
     serde::{Deserialize, Serialize},
@@ -39,7 +39,7 @@ impl Signature {
             EIP191 => {
                 // Technically we can use EIP-6492 to verify EIP-191 signatures as well,
                 // but since we know the signature type we can avoid an RPC request.
-                verify_eip191(&signature, &address, eip191_hash_message(message))
+                verify_eip191(&signature, &address, message.as_bytes())
             }
             EIP1271 | EIP6492 => {
                 if let Some(provider) = provider {
