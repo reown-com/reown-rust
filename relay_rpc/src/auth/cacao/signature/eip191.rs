@@ -1,8 +1,6 @@
 use {
     super::CacaoError,
-    crate::auth::cacao::signature::strip_hex_prefix,
-    alloy_primitives::Address,
-    sha3::{Digest, Keccak256},
+    alloy_primitives::{Address, FixedBytes},
 };
 
 pub const EIP191: &str = "eip191";
@@ -19,7 +17,7 @@ pub fn eip191_bytes(message: &str) -> Vec<u8> {
 pub fn verify_eip191(
     signature: &[u8],
     address: &Address,
-    hash: Keccak256,
+    hash: FixedBytes<32>,
 ) -> Result<(), CacaoError> {
     use k256::ecdsa::{RecoveryId, Signature as Sig, VerifyingKey};
 
@@ -28,39 +26,34 @@ pub fn verify_eip191(
     let recovery_id = RecoveryId::try_from(signature.get(64).ok_or(CacaoError::Verification)? % 27)
         .map_err(|_| CacaoError::Verification)?;
 
-    let recovered_key = VerifyingKey::recover_from_digest(hash, &sig, recovery_id)
+    let recovered_key = VerifyingKey::recover_from_prehash(hash.as_slice(), &sig, recovery_id)
         .map_err(|_| CacaoError::Verification)?;
 
-    let hash = Keccak256::default()
-        .chain_update(
-            recovered_key
-                .to_encoded_point(false)
-                .as_bytes()
-                .get(1..)
-                .ok_or(CacaoError::Verification)?,
-        )
-        .finalize();
-    let add = hash.get(12..).ok_or(CacaoError::Verification)?;
+    let add = Address::from_public_key(&recovered_key);
 
-    let address_encoded = data_encoding::HEXLOWER_PERMISSIVE.encode(add);
-
-    if address_encoded.to_lowercase() != strip_hex_prefix(&address.to_string()).to_lowercase() {
-        Err(CacaoError::Verification)
-    } else {
+    if &add == address {
         Ok(())
+    } else {
+        Err(CacaoError::Verification)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        crate::auth::cacao::signature::{
-            eip191::verify_eip191,
-            test_helpers::{message_hash_internal, sign_message},
-        },
-        alloy_primitives::Address,
+        crate::auth::cacao::signature::eip191::verify_eip191,
+        alloy_primitives::{eip191_hash_message, Address},
         k256::ecdsa::SigningKey,
     };
+
+    pub fn sign_message(message: &str, private_key: &SigningKey) -> Vec<u8> {
+        let (signature, recovery): (k256::ecdsa::Signature, _) = private_key
+            .sign_prehash_recoverable(eip191_hash_message(message).as_slice())
+            .unwrap();
+        let signature = signature.to_bytes();
+        // need for +27 is mentioned in EIP-1271 reference implementation
+        [&signature[..], &[recovery.to_byte() + 27]].concat()
+    }
 
     #[test]
     fn test_eip191() {
@@ -68,7 +61,7 @@ mod tests {
         let message = "xxx";
         let signature = sign_message(message, &private_key);
         let address = Address::from_private_key(&private_key);
-        verify_eip191(&signature, &address, message_hash_internal(message)).unwrap();
+        verify_eip191(&signature, &address, eip191_hash_message(message)).unwrap();
     }
 
     #[test]
@@ -78,7 +71,7 @@ mod tests {
         let mut signature = sign_message(message, &private_key);
         *signature.first_mut().unwrap() = signature.first().unwrap().wrapping_add(1);
         let address = Address::from_private_key(&private_key);
-        assert!(verify_eip191(&signature, &address, message_hash_internal(message)).is_err());
+        assert!(verify_eip191(&signature, &address, eip191_hash_message(message)).is_err());
     }
 
     #[test]
@@ -88,7 +81,7 @@ mod tests {
         let signature = sign_message(message, &private_key);
         let mut address = Address::from_private_key(&private_key);
         *address.0.first_mut().unwrap() = address.0.first().unwrap().wrapping_add(1);
-        assert!(verify_eip191(&signature, &address, message_hash_internal(message)).is_err());
+        assert!(verify_eip191(&signature, &address, eip191_hash_message(message)).is_err());
     }
 
     #[test]
@@ -98,6 +91,6 @@ mod tests {
         let signature = sign_message(message, &private_key);
         let address = Address::from_private_key(&private_key);
         let message2 = "yyy";
-        assert!(verify_eip191(&signature, &address, message_hash_internal(message2)).is_err());
+        assert!(verify_eip191(&signature, &address, eip191_hash_message(message2)).is_err());
     }
 }
