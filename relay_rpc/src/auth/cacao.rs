@@ -2,7 +2,7 @@ use {
     self::{
         header::Header,
         payload::Payload,
-        signature::{get_rpc_url::GetRpcUrl, Signature},
+        signature::{get_provider::GetProvider, Signature},
     },
     alloy_primitives::AddressError,
     core::fmt::Debug,
@@ -98,7 +98,7 @@ pub struct Cacao {
 impl Cacao {
     const ETHEREUM: &'static str = "Ethereum";
 
-    pub async fn verify(&self, provider: Option<&impl GetRpcUrl>) -> Result<(), CacaoError> {
+    pub async fn verify(&self, provider: Option<&impl GetProvider>) -> Result<(), CacaoError> {
         self.p.validate()?;
         self.h.validate()?;
         self.s.verify(self, provider).await

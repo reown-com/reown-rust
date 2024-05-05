@@ -141,7 +141,7 @@ impl ClientStream {
 
     /// Closes the connection.
     pub async fn close(&mut self, frame: Option<CloseFrame<'static>>) -> Result<(), ClientError> {
-        self.close_frame = frame.clone();
+        self.close_frame.clone_from(&frame);
         self.socket
             .close(frame)
             .await
@@ -220,7 +220,7 @@ impl ClientStream {
                 }
 
                 Message::Close(frame) => {
-                    self.close_frame = frame.clone();
+                    self.close_frame.clone_from(frame);
                     Some(StreamEvent::ConnectionClosed(frame.clone()))
                 }
 

@@ -1,6 +1,7 @@
 pub use reqwest::Error;
 use {
-    relay_rpc::{auth::cacao::signature::get_rpc_url::GetRpcUrl, domain::ProjectId},
+    alloy_provider::ReqwestProvider,
+    relay_rpc::{auth::cacao::signature::get_provider::GetProvider, domain::ProjectId},
     serde::Deserialize,
     std::{collections::HashSet, convert::Infallible, sync::Arc, time::Duration},
     tokio::{sync::RwLock, task::JoinHandle},
@@ -98,18 +99,22 @@ fn build_rpc_url(blockchain_api_rpc_endpoint: Url, chain_id: &str, project_id: &
     url
 }
 
-impl GetRpcUrl for BlockchainApiProvider {
-    async fn get_rpc_url(&self, chain_id: String) -> Option<Url> {
+impl GetProvider for BlockchainApiProvider {
+    type Provider = ReqwestProvider;
+    type Transport = alloy_transport_http::Http<reqwest::Client>;
+
+    async fn get_provider(&self, chain_id: String) -> Option<Self::Provider> {
         self.supported_chains
             .read()
             .await
             .contains(&chain_id)
             .then(|| {
-                build_rpc_url(
+                let url = build_rpc_url(
                     self.blockchain_api_rpc_endpoint.clone(),
                     &chain_id,
                     self.project_id.as_ref(),
-                )
+                );
+                ReqwestProvider::new_http(url)
             })
     }
 }

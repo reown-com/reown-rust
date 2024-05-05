@@ -1,9 +1,17 @@
-use {super::signature::get_rpc_url::GetRpcUrl, crate::auth::cacao::Cacao, url::Url};
+use {
+    super::signature::get_provider::GetProvider,
+    crate::auth::cacao::Cacao,
+    alloy_provider::ReqwestProvider,
+};
 
 struct MockGetRpcUrl;
 
-impl GetRpcUrl for MockGetRpcUrl {
-    async fn get_rpc_url(&self, _: String) -> Option<Url> {
+// https://github.com/alloy-rs/alloy/issues/568
+impl GetProvider for MockGetRpcUrl {
+    type Provider = ReqwestProvider;
+    type Transport = alloy_transport_http::Http<reqwest::Client>;
+
+    async fn get_provider(&self, _: String) -> Option<Self::Provider> {
         None
     }
 }

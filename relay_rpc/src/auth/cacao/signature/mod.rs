@@ -1,17 +1,16 @@
 use {
     self::{
         eip191::{verify_eip191, EIP191},
-        get_rpc_url::GetRpcUrl,
+        get_provider::GetProvider,
     },
     super::{Cacao, CacaoError},
     alloy_primitives::{hex::FromHex, Address, Bytes},
-    alloy_provider::{network::Ethereum, ReqwestProvider},
     erc6492::verify_signature,
     serde::{Deserialize, Serialize},
 };
 
 pub mod eip191;
-pub mod get_rpc_url;
+pub mod get_provider;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Hash)]
 pub struct Signature {
@@ -26,7 +25,7 @@ impl Signature {
     pub async fn verify(
         &self,
         cacao: &Cacao,
-        provider: Option<&impl GetRpcUrl>,
+        provider: Option<&impl GetProvider>,
     ) -> Result<(), CacaoError> {
         let chain_id = cacao.p.chain_id_reference()?;
         let address = cacao.p.address()?;
@@ -43,12 +42,10 @@ impl Signature {
             }
             EIP1271 | EIP6492 => {
                 if let Some(provider) = provider {
-                    let provider = ReqwestProvider::<Ethereum>::new_http(
-                        provider
-                            .get_rpc_url(chain_id)
-                            .await
-                            .ok_or(CacaoError::ProviderNotAvailable)?,
-                    );
+                    let provider = provider
+                        .get_provider(chain_id)
+                        .await
+                        .ok_or(CacaoError::ProviderNotAvailable)?;
                     let result = verify_signature(signature, address, message, provider)
                         .await
                         .map_err(CacaoError::Rpc)?;
