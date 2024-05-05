@@ -54,7 +54,7 @@ jobs:
           profile: default
           override: true
 
-      - uses: Swatinem/rust-cache@v2
+      # - uses: Swatinem/rust-cache@v2
 
       - uses: taiki-e/install-action@v1
         with:
