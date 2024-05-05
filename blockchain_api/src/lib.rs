@@ -1,9 +1,16 @@
 pub use reqwest::Error;
 use {
     alloy_provider::ReqwestProvider,
+    alloy_rpc_client::RpcClient,
+    alloy_transport_http::Http,
     relay_rpc::{auth::cacao::signature::get_provider::GetProvider, domain::ProjectId},
     serde::Deserialize,
-    std::{collections::HashSet, convert::Infallible, sync::Arc, time::Duration},
+    std::{
+        collections::{HashMap, HashSet},
+        convert::Infallible,
+        sync::Arc,
+        time::Duration,
+    },
     tokio::{sync::RwLock, task::JoinHandle},
     tracing::error,
     url::Url,
@@ -27,6 +34,8 @@ pub struct BlockchainApiProvider {
     blockchain_api_rpc_endpoint: Url,
     supported_chains: Arc<RwLock<HashSet<String>>>,
     refresh_job: Arc<JoinHandle<Infallible>>,
+    http_client: reqwest::Client,
+    provider_cache: Arc<RwLock<HashMap<String, ReqwestProvider>>>,
 }
 
 impl Drop for BlockchainApiProvider {
@@ -87,6 +96,8 @@ impl BlockchainApiProvider {
             blockchain_api_rpc_endpoint,
             supported_chains,
             refresh_job: Arc::new(refresh_job),
+            http_client: reqwest::Client::new(),
+            provider_cache: Arc::new(RwLock::new(HashMap::new())),
         })
     }
 }
@@ -104,18 +115,31 @@ impl GetProvider for BlockchainApiProvider {
     type Transport = alloy_transport_http::Http<reqwest::Client>;
 
     async fn get_provider(&self, chain_id: String) -> Option<Self::Provider> {
-        self.supported_chains
-            .read()
-            .await
-            .contains(&chain_id)
-            .then(|| {
-                let url = build_rpc_url(
-                    self.blockchain_api_rpc_endpoint.clone(),
-                    &chain_id,
-                    self.project_id.as_ref(),
-                );
-                ReqwestProvider::new_http(url)
-            })
+        if self.supported_chains.read().await.contains(&chain_id) {
+            Some(
+                if let Some(provider) = self.provider_cache.read().await.get(&chain_id) {
+                    provider.clone()
+                } else {
+                    let url = build_rpc_url(
+                        self.blockchain_api_rpc_endpoint.clone(),
+                        &chain_id,
+                        self.project_id.as_ref(),
+                    );
+                    let provider = ReqwestProvider::new({
+                        let http = Http::with_client(self.http_client.clone(), url);
+                        let is_local = http.guess_local();
+                        RpcClient::new(http, is_local)
+                    });
+                    self.provider_cache
+                        .write()
+                        .await
+                        .insert(chain_id.clone(), provider.clone());
+                    provider
+                },
+            )
+        } else {
+            None
+        }
     }
 }
 
