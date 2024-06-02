@@ -5,7 +5,15 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-default = ["tokio-tungstenite/native-tls"]
+wasm = [
+    "dep:wasm-bindgen",
+    "dep:web-sys",
+    "dep:getrandom",
+    "tokio-tungstenite/rustls-tls-native-roots",
+    "reqwest/rustls-tls-native-roots",
+    "reqwest/json"
+]
+default = ["tokio-tungstenite/native-tls", "reqwest/json"]
 rustls = ["tokio-tungstenite/rustls-tls-native-roots"]
 
 [dependencies]
@@ -19,13 +27,16 @@ pin-project = "1.0"
 chrono = { version = "0.4", default-features = false, features = ["alloc", "std"] }
 url = "2.3"
 http = "1.0.0"
+wasm-bindgen = { version = "0.2", optional = true}
+web-sys = { version = "0.3", optional = true}
+getrandom = { version = "0.2", features = ["js"], optional = true}
 
 # HTTP client dependencies.
-reqwest = { version = "0.12.2", features = ["json"] }
+reqwest = { version = "0.12.2" }
 
 # WebSocket client dependencies.
 tokio = { version = "1.22", features = ["rt", "time", "sync", "macros", "rt-multi-thread"] }
-tokio-tungstenite = "0.21.0"
+tokio-tungstenite = { version = "0.21.0" }
 futures-channel = "0.3"
 tokio-stream = "0.1"
 tokio-util = "0.7"
