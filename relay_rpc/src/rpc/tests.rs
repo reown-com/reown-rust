@@ -7,6 +7,7 @@ fn request() {
         Params::Publish(Publish {
             topic: "topic".into(),
             message: "payload".into(),
+            attestation: Some(Arc::from("attestation_payload")),
             ttl_secs: 12,
             tag: 0,
             prompt: false,
@@ -17,7 +18,7 @@ fn request() {
 
     assert_eq!(
         &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"irn_publish","params":{"topic":"topic","message":"payload","ttl":12,"tag":0}}"#
+        r#"{"id":1,"jsonrpc":"2.0","method":"irn_publish","params":{"topic":"topic","message":"payload","attestation":"attestation_payload","ttl":12,"tag":0}}"#
     );
 
     let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
@@ -91,6 +92,7 @@ fn subscription() {
     let data = SubscriptionData {
         topic: "test_topic".into(),
         message: "test_message".into(),
+        attestation: Some(Arc::from("test_attestation")),
         published_at: 123,
         tag: 1000,
     };
@@ -104,7 +106,7 @@ fn subscription() {
 
     assert_eq!(
         &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"irn_subscription","params":{"id":"test_id","data":{"topic":"test_topic","message":"test_message","publishedAt":123,"tag":1000}}}"#
+        r#"{"id":1,"jsonrpc":"2.0","method":"irn_subscription","params":{"id":"test_id","data":{"topic":"test_topic","message":"test_message","attestation":"test_attestation","publishedAt":123,"tag":1000}}}"#
     );
 
     let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
@@ -127,7 +129,6 @@ fn batch_receive() {
     ));
 
     let serialized = serde_json::to_string(&payload).unwrap();
-    eprintln!("{serialized}");
 
     assert_eq!(
         &serialized,
@@ -289,6 +290,7 @@ fn validation() {
         params: Params::Publish(Publish {
             topic: topic.clone(),
             message: message.clone(),
+            attestation: None,
             ttl_secs: 0,
             tag: 0,
             prompt: false,
@@ -303,6 +305,7 @@ fn validation() {
         params: Params::Publish(Publish {
             topic: topic.clone(),
             message: message.clone(),
+            attestation: None,
             ttl_secs: 0,
             tag: 0,
             prompt: false,
@@ -317,6 +320,7 @@ fn validation() {
         params: Params::Publish(Publish {
             topic: topic.clone(),
             message: message.clone(),
+            attestation: None,
             ttl_secs: 0,
             tag: 0,
             prompt: false,
@@ -331,6 +335,7 @@ fn validation() {
         params: Params::Publish(Publish {
             topic: Topic::from("invalid"),
             message: message.clone(),
+            attestation: None,
             ttl_secs: 0,
             tag: 0,
             prompt: false,
@@ -407,6 +412,7 @@ fn validation() {
             data: SubscriptionData {
                 topic: topic.clone(),
                 message: message.clone(),
+                attestation: None,
                 published_at: 123,
                 tag: 1000,
             },
@@ -423,6 +429,7 @@ fn validation() {
             data: SubscriptionData {
                 topic: topic.clone(),
                 message: message.clone(),
+                attestation: None,
                 published_at: 123,
                 tag: 1000,
             },
@@ -439,6 +446,7 @@ fn validation() {
             data: SubscriptionData {
                 topic: Topic::from("invalid"),
                 message,
+                attestation: None,
                 published_at: 123,
                 tag: 1000,
             },

@@ -156,6 +156,7 @@ impl Client {
         &self,
         topic: Topic,
         message: impl Into<Arc<str>>,
+        attestation: impl Into<Option<Arc<str>>>,
         tag: u32,
         ttl: Duration,
         prompt: bool,
@@ -163,6 +164,7 @@ impl Client {
         let (request, response) = create_request(Publish {
             topic,
             message: message.into(),
+            attestation: attestation.into(),
             ttl_secs: ttl.as_secs() as u32,
             tag,
             prompt,
