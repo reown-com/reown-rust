@@ -529,6 +529,9 @@ pub struct Publish {
     /// Message to publish.
     pub message: Arc<str>,
 
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub attestation: Option<Arc<str>>,
+
     /// Duration for which the message should be kept in the mailbox if it can't
     /// be delivered, in seconds.
     #[serde(rename = "ttl")]
@@ -556,6 +559,7 @@ impl Publish {
             data: SubscriptionData {
                 topic: self.topic.clone(),
                 message: self.message.clone(),
+                attestation: self.attestation.clone(),
                 published_at,
                 tag: self.tag,
             },
@@ -727,6 +731,9 @@ pub struct SubscriptionData {
 
     /// The message for the subscription.
     pub message: Arc<str>,
+
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub attestation: Option<Arc<str>>,
 
     /// Message publish timestamp in UTC milliseconds.
     pub published_at: i64,

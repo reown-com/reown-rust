@@ -93,6 +93,7 @@ async fn main() -> anyhow::Result<()> {
         .publish(
             topic.clone(),
             Arc::from("Hello WalletConnect!"),
+            None,
             0,
             Duration::from_secs(60),
             false,

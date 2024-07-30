@@ -85,6 +85,8 @@ pub struct WatchEventPayload {
     pub topic: Topic,
     /// The published message.
     pub message: Arc<str>,
+    /// The Verify attestation JWT.
+    pub attestation: Option<Arc<str>>,
     /// Message publishing timestamp.
     pub published_at: i64,
     /// Message tag.
@@ -224,6 +226,7 @@ mod test {
                 status: WatchStatus::Accepted,
                 topic,
                 message: Arc::from("test message"),
+                attestation: Some(Arc::from("test attestation")),
                 published_at: iat.timestamp(),
                 tag: 1100,
             },
@@ -233,7 +236,7 @@ mod test {
         // lowercase.
         assert_eq!(
             serde_json::to_string(&claims).unwrap(),
-            r#"{"iss":"did:key:z6Mku3wsRZTAHjr6xrYWVUfyGeNSNz1GJRVfazp3N76AL9gE","aud":"wss://relay.walletconnect.com","sub":"https://example.com","iat":946684800,"exp":32503680000,"act":"irn_watchEvent","typ":"subscriber","whu":"https://example.com","evt":{"messageId":12345678,"status":"accepted","topic":"474e88153f4db893de42c35e1891dc0e37a02e11961385de0475460fb48b8639","message":"test message","publishedAt":946684800,"tag":1100}}"#
+            r#"{"iss":"did:key:z6Mku3wsRZTAHjr6xrYWVUfyGeNSNz1GJRVfazp3N76AL9gE","aud":"wss://relay.walletconnect.com","sub":"https://example.com","iat":946684800,"exp":32503680000,"act":"irn_watchEvent","typ":"subscriber","whu":"https://example.com","evt":{"messageId":12345678,"status":"accepted","topic":"474e88153f4db893de42c35e1891dc0e37a02e11961385de0475460fb48b8639","message":"test message","attestation":"test attestation","publishedAt":946684800,"tag":1100}}"#
         );
 
         // Verify that the claims can be encoded and decoded correctly.

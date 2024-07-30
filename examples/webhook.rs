@@ -194,6 +194,7 @@ async fn main() -> anyhow::Result<()> {
         .publish(
             topic.clone(),
             message.clone(),
+            None,
             1100,
             Duration::from_secs(30),
             false,

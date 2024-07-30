@@ -105,6 +105,7 @@ impl Client {
         &self,
         topic: Topic,
         message: impl Into<Arc<str>>,
+        attestation: impl Into<Option<Arc<str>>>,
         tag: u32,
         ttl: Duration,
         prompt: bool,
@@ -120,6 +121,7 @@ impl Client {
         self.request(rpc::Publish {
             topic,
             message: message.into(),
+            attestation: attestation.into(),
             ttl_secs,
             tag,
             prompt,
