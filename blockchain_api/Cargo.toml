@@ -5,6 +5,9 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
+alloy-provider = { git = "https://github.com/alloy-rs/alloy.git", rev = "d68a6b7" }
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy.git", rev = "d68a6b7" }
+alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy.git", rev = "d68a6b7" }
 relay_rpc = { path = "../relay_rpc", features = ["cacao"] }
 reqwest = { version = "0.12.2", features = ["json"] }
 serde = "1.0"

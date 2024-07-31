@@ -2,12 +2,12 @@ use {
     self::{
         header::Header,
         payload::Payload,
-        signature::{get_rpc_url::GetRpcUrl, Signature},
+        signature::{get_provider::GetProvider, Signature},
     },
-    alloy_primitives::hex::FromHexError,
+    alloy_primitives::AddressError,
     core::fmt::Debug,
+    erc6492::RpcError,
     serde::{Deserialize, Serialize},
-    serde_json::value::RawValue,
     std::{
         fmt::{Display, Write},
         sync::Arc,
@@ -31,16 +31,10 @@ pub enum CacaoError {
     PayloadResources,
 
     #[error("Invalid address")]
-    AddressInvalid,
+    AddressInvalid(AddressError),
 
-    #[error("Address not EIP-191")]
-    AddressNotEip191(FromHexError),
-
-    #[error("EIP-1271 signatures not supported")]
-    Eip1271NotSupported,
-
-    #[error("EIP-6492 signatures not supported")]
-    Eip6492NotSupported,
+    #[error("Provider address verification not supported")]
+    ProviderAddressVerificationNotSupported,
 
     #[error("Unsupported signature type")]
     UnsupportedSignature,
@@ -51,11 +45,8 @@ pub enum CacaoError {
     #[error("Unable to verify")]
     Verification,
 
-    #[error("Internal EIP-1271 resolution error: {0}")]
-    Eip1271Internal(alloy_json_rpc::RpcError<alloy_transport::TransportErrorKind, Box<RawValue>>),
-
-    #[error("Internal EIP-6492 resolution error: {0}")]
-    Eip6492Internal(alloy_json_rpc::RpcError<alloy_transport::TransportErrorKind, Box<RawValue>>),
+    #[error("Internal verification error: {0}")]
+    Rpc(RpcError),
 }
 
 impl From<std::fmt::Error> for CacaoError {
@@ -107,7 +98,7 @@ pub struct Cacao {
 impl Cacao {
     const ETHEREUM: &'static str = "Ethereum";
 
-    pub async fn verify(&self, provider: Option<&impl GetRpcUrl>) -> Result<(), CacaoError> {
+    pub async fn verify(&self, provider: Option<&impl GetProvider>) -> Result<(), CacaoError> {
         self.p.validate()?;
         self.h.validate()?;
         self.s.verify(self, provider).await

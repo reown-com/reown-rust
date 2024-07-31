@@ -1,24 +1,16 @@
 use {
     self::{
-        eip1271::{verify_eip1271, EIP1271},
-        eip191::{eip191_bytes, verify_eip191, EIP191},
-        eip6492::{verify_eip6492, EIP6492},
-        get_rpc_url::GetRpcUrl,
+        eip191::{verify_eip191, EIP191},
+        get_provider::GetProvider,
     },
     super::{Cacao, CacaoError},
-    alloy_primitives::Address,
+    alloy_primitives::{hex::FromHex, Address, Bytes},
+    erc6492::verify_signature,
     serde::{Deserialize, Serialize},
-    sha3::{Digest, Keccak256},
-    std::str::FromStr,
 };
 
-pub mod eip1271;
 pub mod eip191;
-pub mod eip6492;
-pub mod get_rpc_url;
-
-#[cfg(test)]
-mod test_helpers;
+pub mod get_provider;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Hash)]
 pub struct Signature {
@@ -26,74 +18,47 @@ pub struct Signature {
     pub s: String,
 }
 
+pub const EIP1271: &str = "eip1271";
+pub const EIP6492: &str = "eip6492";
+
 impl Signature {
     pub async fn verify(
         &self,
         cacao: &Cacao,
-        provider: Option<&impl GetRpcUrl>,
+        provider: Option<&impl GetProvider>,
     ) -> Result<(), CacaoError> {
+        let chain_id = cacao.p.chain_id_reference()?;
         let address = cacao.p.address()?;
-
-        let signature = data_encoding::HEXLOWER_PERMISSIVE
-            .decode(strip_hex_prefix(&cacao.s.s).as_bytes())
-            .map_err(|_| CacaoError::Verification)?;
-
-        let hash = Keccak256::new_with_prefix(eip191_bytes(&cacao.siwe_message()?));
+        let address =
+            Address::parse_checksummed(address, None).map_err(CacaoError::AddressInvalid)?;
+        let signature = Bytes::from_hex(&cacao.s.s).map_err(|_| CacaoError::Verification)?;
+        let message = cacao.siwe_message()?;
 
         match self.t.as_str() {
-            EIP191 => verify_eip191(
-                &signature,
-                &address.parse().map_err(CacaoError::AddressNotEip191)?,
-                hash,
-            ),
-            EIP1271 => {
-                if let Some(provider) = provider {
-                    let chain_id = cacao.p.chain_id_reference()?;
-                    let provider = provider.get_rpc_url(chain_id).await;
-                    if let Some(provider) = provider {
-                        verify_eip1271(
-                            signature,
-                            Address::from_str(&address).map_err(|_| CacaoError::AddressInvalid)?,
-                            &hash.finalize()[..]
-                                .try_into()
-                                .expect("hash length is 32 bytes"),
-                            provider,
-                        )
-                        .await
-                    } else {
-                        Err(CacaoError::ProviderNotAvailable)
-                    }
-                } else {
-                    Err(CacaoError::Eip1271NotSupported)
-                }
+            EIP191 => {
+                // Technically we can use EIP-6492 to verify EIP-191 signatures as well,
+                // but since we know the signature type we can avoid an RPC request.
+                verify_eip191(&signature, &address, message.as_bytes())
             }
-            EIP6492 => {
+            EIP1271 | EIP6492 => {
                 if let Some(provider) = provider {
-                    let chain_id = cacao.p.chain_id_reference()?;
-                    let provider = provider.get_rpc_url(chain_id).await;
-                    if let Some(provider) = provider {
-                        verify_eip6492(
-                            signature,
-                            Address::from_str(&address).map_err(|_| CacaoError::AddressInvalid)?,
-                            &hash.finalize()[..]
-                                .try_into()
-                                .expect("hash length is 32 bytes"),
-                            provider,
-                        )
+                    let provider = provider
+                        .get_provider(chain_id)
                         .await
+                        .ok_or(CacaoError::ProviderNotAvailable)?;
+                    let result = verify_signature(signature, address, message, provider)
+                        .await
+                        .map_err(CacaoError::Rpc)?;
+                    if result.is_valid() {
+                        Ok(())
                     } else {
-                        Err(CacaoError::ProviderNotAvailable)
+                        Err(CacaoError::Verification)
                     }
                 } else {
-                    Err(CacaoError::Eip6492NotSupported)
+                    Err(CacaoError::ProviderNotAvailable)
                 }
             }
             _ => Err(CacaoError::UnsupportedSignature),
         }
     }
-}
-
-/// Remove the "0x" prefix from a hex string.
-fn strip_hex_prefix(s: &str) -> &str {
-    s.strip_prefix("0x").unwrap_or(s)
 }
