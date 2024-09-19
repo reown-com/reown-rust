@@ -1,9 +1,9 @@
 use {
     crate::auth::cacao::CacaoError,
-    alloy_primitives::Address,
-    alloy_provider::{network::Ethereum, Provider, ReqwestProvider},
-    alloy_rpc_types::{TransactionInput, TransactionRequest},
-    alloy_sol_types::{sol, SolConstructor},
+    alloy::primitives::Address,
+    alloy::providers::{network::Ethereum, Provider, ReqwestProvider},
+    alloy::rpc::types::{TransactionInput, TransactionRequest},
+    alloy::{sol, sol_types::SolConstructor},
     url::Url,
 };
 
@@ -42,20 +42,17 @@ pub async fn verify_eip6492(
     let transaction_request =
         TransactionRequest::default().input(TransactionInput::new(bytes.into()));
 
-    let result = provider
-        .call(&transaction_request, Default::default())
-        .await
-        .map_err(|e| {
-            if let Some(error_response) = e.as_error_resp() {
-                if error_response.message == "execution reverted" {
-                    CacaoError::Verification
-                } else {
-                    CacaoError::Eip6492Internal(e)
-                }
+    let result = provider.call(&transaction_request).await.map_err(|e| {
+        if let Some(error_response) = e.as_error_resp() {
+            if error_response.message == "execution reverted" {
+                CacaoError::Verification
             } else {
                 CacaoError::Eip6492Internal(e)
             }
-        })?;
+        } else {
+            CacaoError::Eip6492Internal(e)
+        }
+    })?;
 
     let magic = result.first();
     if let Some(magic) = magic {
@@ -76,16 +73,12 @@ mod test {
         crate::auth::cacao::signature::{
             strip_hex_prefix,
             test_helpers::{
-                deploy_contract,
-                message_hash,
-                sign_message,
-                spawn_anvil,
-                CREATE2_CONTRACT,
+                deploy_contract, message_hash, sign_message, spawn_anvil, CREATE2_CONTRACT,
                 EIP1271_MOCK_CONTRACT,
             },
         },
-        alloy_primitives::{address, b256, Uint},
-        alloy_sol_types::{SolCall, SolValue},
+        alloy::primitives::{address, b256, Uint},
+        alloy::sol_types::{SolCall, SolValue},
         k256::ecdsa::SigningKey,
     };
 

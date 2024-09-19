@@ -1,9 +1,9 @@
 use {
     super::CacaoError,
-    alloy_primitives::Address,
-    alloy_provider::{network::Ethereum, Provider, ReqwestProvider},
-    alloy_rpc_types::{TransactionInput, TransactionRequest},
-    alloy_sol_types::{sol, SolCall},
+    alloy::primitives::Address,
+    alloy::providers::{network::Ethereum, Provider, ReqwestProvider},
+    alloy::rpc::types::{TransactionInput, TransactionRequest},
+    alloy::{sol, sol_types::SolCall},
     url::Url,
 };
 
@@ -40,7 +40,7 @@ pub async fn verify_eip1271(
         ));
 
     let result = provider
-        .call(&call_request, Default::default())
+        .call(&call_request)
         .await
         .map_err(|e| {
             if let Some(error_response) = e.as_error_resp() {
@@ -81,7 +81,7 @@ mod test {
                 EIP1271_MOCK_CONTRACT,
             },
         },
-        alloy_primitives::address,
+        alloy::primitives::address,
         k256::ecdsa::SigningKey,
         sha3::{Digest, Keccak256},
     };

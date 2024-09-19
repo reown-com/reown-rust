@@ -6,7 +6,7 @@ use {
         get_rpc_url::GetRpcUrl,
     },
     super::{Cacao, CacaoError},
-    alloy_primitives::Address,
+    alloy::primitives::Address,
     serde::{Deserialize, Serialize},
     sha3::{Digest, Keccak256},
     std::str::FromStr,

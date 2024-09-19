@@ -1,7 +1,7 @@
 use {
     super::CacaoError,
     crate::auth::cacao::signature::strip_hex_prefix,
-    alloy_primitives::Address,
+    alloy::primitives::Address,
     sha3::{Digest, Keccak256},
 };
 
