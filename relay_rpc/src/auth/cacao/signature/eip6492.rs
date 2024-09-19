@@ -1,9 +1,12 @@
 use {
     crate::auth::cacao::CacaoError,
-    alloy::primitives::Address,
-    alloy::providers::{network::Ethereum, Provider, ReqwestProvider},
-    alloy::rpc::types::{TransactionInput, TransactionRequest},
-    alloy::{sol, sol_types::SolConstructor},
+    alloy::{
+        primitives::Address,
+        providers::{network::Ethereum, Provider, ReqwestProvider},
+        rpc::types::{TransactionInput, TransactionRequest},
+        sol,
+        sol_types::SolConstructor,
+    },
     url::Url,
 };
 
@@ -73,12 +76,18 @@ mod test {
         crate::auth::cacao::signature::{
             strip_hex_prefix,
             test_helpers::{
-                deploy_contract, message_hash, sign_message, spawn_anvil, CREATE2_CONTRACT,
+                deploy_contract,
+                message_hash,
+                sign_message,
+                spawn_anvil,
+                CREATE2_CONTRACT,
                 EIP1271_MOCK_CONTRACT,
             },
         },
-        alloy::primitives::{address, b256, Uint},
-        alloy::sol_types::{SolCall, SolValue},
+        alloy::{
+            primitives::{address, b256, Uint},
+            sol_types::{SolCall, SolValue},
+        },
         k256::ecdsa::SigningKey,
     };
 

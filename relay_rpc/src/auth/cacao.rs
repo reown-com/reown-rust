@@ -52,10 +52,14 @@ pub enum CacaoError {
     Verification,
 
     #[error("Internal EIP-1271 resolution error: {0}")]
-    Eip1271Internal(alloy::rpc::json_rpc::RpcError<alloy::transports::TransportErrorKind, Box<RawValue>>),
+    Eip1271Internal(
+        alloy::rpc::json_rpc::RpcError<alloy::transports::TransportErrorKind, Box<RawValue>>,
+    ),
 
     #[error("Internal EIP-6492 resolution error: {0}")]
-    Eip6492Internal(alloy::rpc::json_rpc::RpcError<alloy::transports::TransportErrorKind, Box<RawValue>>),
+    Eip6492Internal(
+        alloy::rpc::json_rpc::RpcError<alloy::transports::TransportErrorKind, Box<RawValue>>,
+    ),
 }
 
 impl From<std::fmt::Error> for CacaoError {

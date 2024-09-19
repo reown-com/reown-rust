@@ -1,7 +1,9 @@
 use {
     super::eip191::eip191_bytes,
-    alloy_node_bindings::{Anvil, AnvilInstance},
-    alloy_primitives::Address,
+    alloy::{
+        node_bindings::{Anvil, AnvilInstance},
+        primitives::Address,
+    },
     k256::ecdsa::SigningKey,
     regex::Regex,
     sha2::Digest,

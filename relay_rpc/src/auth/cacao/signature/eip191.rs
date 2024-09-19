@@ -58,7 +58,7 @@ mod tests {
             eip191::verify_eip191,
             test_helpers::{message_hash_internal, sign_message},
         },
-        alloy_primitives::Address,
+        alloy::primitives::Address,
         k256::ecdsa::SigningKey,
     };
 

@@ -1,9 +1,12 @@
 use {
     super::CacaoError,
-    alloy::primitives::Address,
-    alloy::providers::{network::Ethereum, Provider, ReqwestProvider},
-    alloy::rpc::types::{TransactionInput, TransactionRequest},
-    alloy::{sol, sol_types::SolCall},
+    alloy::{
+        primitives::Address,
+        providers::{network::Ethereum, Provider, ReqwestProvider},
+        rpc::types::{TransactionInput, TransactionRequest},
+        sol,
+        sol_types::SolCall,
+    },
     url::Url,
 };
 
@@ -39,20 +42,17 @@ pub async fn verify_eip1271(
             .into(),
         ));
 
-    let result = provider
-        .call(&call_request)
-        .await
-        .map_err(|e| {
-            if let Some(error_response) = e.as_error_resp() {
-                if error_response.message.starts_with("execution reverted:") {
-                    CacaoError::Verification
-                } else {
-                    CacaoError::Eip1271Internal(e)
-                }
+    let result = provider.call(&call_request).await.map_err(|e| {
+        if let Some(error_response) = e.as_error_resp() {
+            if error_response.message.starts_with("execution reverted:") {
+                CacaoError::Verification
             } else {
                 CacaoError::Eip1271Internal(e)
             }
-        })?;
+        } else {
+            CacaoError::Eip1271Internal(e)
+        }
+    })?;
 
     let magic = result.get(..4);
     if let Some(magic) = magic {

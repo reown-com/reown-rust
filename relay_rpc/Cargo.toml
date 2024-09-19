@@ -42,6 +42,7 @@ strum = { version = "0.26", features = ["strum_macros", "derive"] }
 
 [dev-dependencies]
 tokio = { version = "1.35.1", features = ["test-util", "macros"] }
+alloy = { version = "0.3.6", features = ["node-bindings"] }
 
 [build-dependencies]
 serde_json = "1.0"
