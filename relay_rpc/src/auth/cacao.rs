@@ -4,7 +4,7 @@ use {
         payload::Payload,
         signature::{get_rpc_url::GetRpcUrl, Signature},
     },
-    alloy_primitives::hex::FromHexError,
+    alloy::primitives::hex::FromHexError,
     core::fmt::Debug,
     serde::{Deserialize, Serialize},
     serde_json::value::RawValue,
@@ -52,10 +52,14 @@ pub enum CacaoError {
     Verification,
 
     #[error("Internal EIP-1271 resolution error: {0}")]
-    Eip1271Internal(alloy_json_rpc::RpcError<alloy_transport::TransportErrorKind, Box<RawValue>>),
+    Eip1271Internal(
+        alloy::rpc::json_rpc::RpcError<alloy::transports::TransportErrorKind, Box<RawValue>>,
+    ),
 
     #[error("Internal EIP-6492 resolution error: {0}")]
-    Eip6492Internal(alloy_json_rpc::RpcError<alloy_transport::TransportErrorKind, Box<RawValue>>),
+    Eip6492Internal(
+        alloy::rpc::json_rpc::RpcError<alloy::transports::TransportErrorKind, Box<RawValue>>,
+    ),
 }
 
 impl From<std::fmt::Error> for CacaoError {
