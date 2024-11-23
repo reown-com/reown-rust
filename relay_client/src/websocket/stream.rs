@@ -1,3 +1,4 @@
+use url::Url;
 use {
     super::{
         inbound::InboundRequest,
@@ -36,9 +37,8 @@ pub type SocketStream = WebSocketStream;
 
 /// Opens a connection to the Relay and returns [`ClientStream`] for the
 /// connection.
-pub async fn create_stream(request: HttpRequest<()>) -> Result<ClientStream, WebsocketClientError> {
-    let uri = request.uri();
-    let socket = connect_async(format!("{}://{}", uri.scheme().unwrap(), uri.host().unwrap()))
+pub async fn create_stream(request: Url) -> Result<ClientStream, WebsocketClientError> {
+    let socket = connect_async(request)
         .await
         .map_err(WebsocketClientError::ConnectionFailed)?;
 

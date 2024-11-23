@@ -300,7 +300,7 @@ impl Client {
     /// Opens a connection to the Relay.
     pub async fn connect(&self, opts: &ConnectionOptions) -> Result<(), ClientError> {
         let (tx, rx) = oneshot::channel();
-        let request = opts.as_ws_request()?;
+        let request = opts.as_url()?;
 
         if self
             .control_tx
