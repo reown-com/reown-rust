@@ -5,7 +5,7 @@ use {
         rpc::{self, ErrorResponse, Payload, Response, ServiceRequest, SuccessfulResponse},
     },
     tokio::sync::mpsc::UnboundedSender,
-    tokio_tungstenite::tungstenite::Message,
+    tokio_tungstenite_wasm::Message,
 };
 
 /// The lower-level inbound RPC request.

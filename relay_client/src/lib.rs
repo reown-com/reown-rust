@@ -107,17 +107,10 @@ impl ConnectionOptions {
     fn as_ws_request(&self) -> Result<HttpRequest<()>, RequestBuildError> {
         use {
             crate::websocket::WebsocketClientError,
-            tokio_tungstenite::tungstenite::client::IntoClientRequest,
         };
-
         let url = self.as_url()?;
-
-        let mut request = url
-            .into_client_request()
-            .map_err(WebsocketClientError::Transport)?;
-
+        let mut request = HttpRequest::builder().uri(format!("{}", url)).body(()).map_err(WebsocketClientError::HttpErr)?;
         self.update_request_headers(request.headers_mut())?;
-
         Ok(request)
     }
 

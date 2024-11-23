@@ -33,10 +33,10 @@ pub use {
     inbound::*,
     outbound::*,
     stream::*,
-    tokio_tungstenite::tungstenite::protocol::CloseFrame,
+    tokio_tungstenite_wasm::CloseFrame,
 };
 
-pub type TransportError = tokio_tungstenite::tungstenite::Error;
+pub type TransportError = tokio_tungstenite_wasm::Error;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WebsocketClientError {
@@ -51,6 +51,9 @@ pub enum WebsocketClientError {
 
     #[error("Websocket transport error: {0}")]
     Transport(TransportError),
+
+    #[error("Url error: {0}")]
+    HttpErr(http::Error),
 
     #[error("Not connected")]
     NotConnected,

@@ -5,8 +5,9 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-default = ["tokio-tungstenite/native-tls"]
-rustls = ["tokio-tungstenite/rustls-tls-native-roots"]
+default = ["tokio-tungstenite-wasm/native-tls"]
+rustls = ["tokio-tungstenite-wasm/rustls-tls-native-roots"]
+
 
 [dependencies]
 relay_rpc = { path = "../relay_rpc" }
@@ -25,10 +26,14 @@ reqwest = { version = "0.12.2", features = ["json"] }
 
 # WebSocket client dependencies.
 tokio = { version = "1.22", features = ["rt", "time", "sync", "macros", "rt-multi-thread"] }
-tokio-tungstenite = "0.21.0"
+tokio-tungstenite-wasm = { version = "0.3"}
 futures-channel = "0.3"
 tokio-stream = "0.1"
 tokio-util = "0.7"
+
+[lints.rust]
+unused_imports = "allow"
+dead_code = "allow"
 
 [lints.clippy]
 indexing_slicing = "deny"

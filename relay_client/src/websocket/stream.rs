@@ -18,27 +18,27 @@ use {
         task::{Context, Poll},
     },
     tokio::{
-        net::TcpStream,
         sync::{
             mpsc,
             mpsc::{UnboundedReceiver, UnboundedSender},
             oneshot,
         },
     },
-    tokio_tungstenite::{
-        connect_async,
-        tungstenite::{protocol::CloseFrame, Message},
-        MaybeTlsStream,
+    tokio_tungstenite_wasm::{
+        CloseFrame,
+        connect as connect_async,
+        Message,
         WebSocketStream,
     },
 };
 
-pub type SocketStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
+pub type SocketStream = WebSocketStream;
 
 /// Opens a connection to the Relay and returns [`ClientStream`] for the
 /// connection.
 pub async fn create_stream(request: HttpRequest<()>) -> Result<ClientStream, WebsocketClientError> {
-    let (socket, _) = connect_async(request)
+    let uri = request.uri();
+    let socket = connect_async(format!("{}://{}", uri.scheme().unwrap(), uri.host().unwrap()))
         .await
         .map_err(WebsocketClientError::ConnectionFailed)?;
 
@@ -143,7 +143,7 @@ impl ClientStream {
     pub async fn close(&mut self, frame: Option<CloseFrame<'static>>) -> Result<(), ClientError> {
         self.close_frame = frame.clone();
         self.socket
-            .close(frame)
+            .close()
             .await
             .map_err(|err| WebsocketClientError::ClosingFailed(err).into())
     }
@@ -223,8 +223,6 @@ impl ClientStream {
                     self.close_frame = frame.clone();
                     Some(StreamEvent::ConnectionClosed(frame.clone()))
                 }
-
-                _ => None,
             },
 
             Err(error) => Some(StreamEvent::InboundError(
@@ -269,7 +267,7 @@ impl Stream for ClientStream {
     type Item = StreamEvent;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        if self.socket.is_terminated() {
+        if self.is_terminated() {
             return Poll::Ready(None);
         }
 
@@ -301,7 +299,7 @@ impl Stream for ClientStream {
 
 impl FusedStream for ClientStream {
     fn is_terminated(&self) -> bool {
-        self.socket.is_terminated()
+        false
     }
 }
 
