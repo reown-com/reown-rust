@@ -1,0 +1,35 @@
+[package]
+name = "wasm_websocket_client"
+version = "0.1.0"
+edition = "2021"
+authors = ["WalletConnect Team"]
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = "1"
+data-encoding = "2"
+futures = "0.3"
+rand = "0.8.5"
+getrandom = { version = "0.2", features = ["js"] }
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+    "Element", "HtmlElement", "Window",
+    "WebSocket", "console", "Event",
+    "Document", "Crypto", "CryptoKey",
+    "DateTimeValue", "SubtleCrypto", "Performance",
+    "TimeEvent"
+] }
+walletconnect_sdk = { path = "../", default-features = false, features = ["wasm", "wasm-debug"] }
+console_error_panic_hook = { version = "0.1" }
+web-time = { version = "1", features = ["serde"] }
+gloo-timers = { version = "0.3", features = ["futures"] }
+
+[package.metadata.wasm-pack.profile.dev]
+wasm-bindgen = { debug-js-glue = true, demangle-name-section = true }
+wasm-opt = false
+
+

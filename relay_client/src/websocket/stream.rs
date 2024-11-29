@@ -6,7 +6,7 @@ use tokio_tungstenite::{
     WebSocketStream,
 };
 #[cfg(target_arch = "wasm32")]
-use tokio_tungstenite_wasm::{connect as connect_async, Message, WebSocketStream};
+use tokio_tungstenite_wasm::{connect as connect_async, CloseFrame, Message, WebSocketStream};
 use {
     super::{
         inbound::InboundRequest,
@@ -26,24 +26,34 @@ use {
         pin::Pin,
         task::{Context, Poll},
     },
-    tokio::{
-        net::TcpStream,
-        sync::{
-            mpsc,
-            mpsc::{UnboundedReceiver, UnboundedSender},
-            oneshot,
-        },
+    tokio::sync::{
+        mpsc,
+        mpsc::{UnboundedReceiver, UnboundedSender},
+        oneshot,
     },
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub type SocketStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::net::TcpStream;
 #[cfg(target_arch = "wasm32")]
 pub type SocketStream = WebSocketStream;
 
 /// Opens a connection to the Relay and returns [`ClientStream`] for the
 /// connection.
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn create_stream(request: HttpRequest<()>) -> Result<ClientStream, WebsocketClientError> {
     let (socket, _) = connect_async(request)
+        .await
+        .map_err(WebsocketClientError::ConnectionFailed)?;
+
+    Ok(ClientStream::new(socket))
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn create_stream(request: HttpRequest<()>) -> Result<ClientStream, WebsocketClientError> {
+    let url = format!("{}", request.uri());
+    let socket = connect_async(url)
         .await
         .map_err(WebsocketClientError::ConnectionFailed)?;
 
@@ -147,8 +157,15 @@ impl ClientStream {
     /// Closes the connection.
     pub async fn close(&mut self, frame: Option<CloseFrame<'static>>) -> Result<(), ClientError> {
         self.close_frame = frame.clone();
+        #[cfg(not(target_arch = "wasm32"))]
         self.socket
             .close(frame)
+            .await
+            .map_err(|err| WebsocketClientError::ClosingFailed(err).into());
+
+        #[cfg(target_arch = "wasm32")]
+        self.socket
+            .close()
             .await
             .map_err(|err| WebsocketClientError::ClosingFailed(err).into())
     }
@@ -187,6 +204,7 @@ impl ClientStream {
 
                         Payload::Response(response) => {
                             let id = response.id();
+
                             if id.is_zero() {
                                 return match response {
                                     Response::Error(response) => Some(StreamEvent::InboundError(
@@ -227,7 +245,7 @@ impl ClientStream {
                     self.close_frame = frame.clone();
                     Some(StreamEvent::ConnectionClosed(frame.clone()))
                 }
-
+                #[cfg(not(target_arch = "wasm32"))]
                 _ => None,
             },
 
@@ -273,7 +291,8 @@ impl Stream for ClientStream {
     type Item = StreamEvent;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        if self.is_terminated() {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.socket.is_terminated() {
             return Poll::Ready(None);
         }
 
@@ -304,8 +323,14 @@ impl Stream for ClientStream {
 }
 
 impl FusedStream for ClientStream {
+    #[cfg(not(target_arch = "wasm32"))]
     fn is_terminated(&self) -> bool {
         self.socket.is_terminated()
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn is_terminated(&self) -> bool {
+        false
     }
 }
 

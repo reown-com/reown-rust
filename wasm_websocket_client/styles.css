@@ -1,0 +1,71 @@
+/* Base styles */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    padding: 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.grid-item {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 1rem;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+}
+
+/* Header row */
+.grid-item:nth-child(-n+5) {
+    background-color: #e9ecef;
+    font-weight: bold;
+    text-transform: capitalize;
+}
+
+/* Topic cell truncation */
+#wc1topic, #wc2topic {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 8ch;
+}
+
+/* Status indicators */
+#wc1connect, #wc2connect {
+    &:contains("connected") {
+        color: #198754;
+        background-color: #d1e7dd;
+    }
+
+    &:contains("disconnected") {
+        color: #842029;
+        background-color: #f8d7da;
+    }
+}
+
+/* Error cells */
+#wc1error, #wc2error {
+    color: #842029;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+    .grid-container {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .grid-item:nth-child(-n+5) {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .grid-container {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+        padding: 0.5rem;
+    }
+}

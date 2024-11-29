@@ -7,7 +7,7 @@ license = "Apache-2.0"
 [features]
 default = ["tokio-tungstenite/native-tls", "tokio-tungstenite/url"]
 rustls = ["tokio-tungstenite/rustls-tls-native-roots", "tokio-tungstenite/url"]
-wasm = ["wasm-bindgen-futures", "tokio-tungstenite-wasm"]
+wasm = ["wasm-bindgen-futures", "tokio-tungstenite-wasm", "getrandom"]
 wasm-debug = ["web-sys"]
 
 [dependencies]
@@ -34,6 +34,7 @@ futures-channel = "0.3"
 # WASM dependencies.
 wasm-bindgen-futures = { version = "0.4" , optional = true }
 web-sys = { version = "0.3" , optional = true, features = ["ConsoleEvent"] }
+getrandom = { version = "0.2" , optional = true, features = ["wasm-bindgen", "js"]}
 
 [lints.clippy]
 indexing_slicing = "deny"
