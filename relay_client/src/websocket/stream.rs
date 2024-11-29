@@ -155,15 +155,18 @@ impl ClientStream {
     }
 
     /// Closes the connection.
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn close(&mut self, frame: Option<CloseFrame<'static>>) -> Result<(), ClientError> {
         self.close_frame = frame.clone();
-        #[cfg(not(target_arch = "wasm32"))]
         self.socket
             .close(frame)
             .await
-            .map_err(|err| WebsocketClientError::ClosingFailed(err).into());
+            .map_err(|err| WebsocketClientError::ClosingFailed(err).into())
+    }
 
-        #[cfg(target_arch = "wasm32")]
+    #[cfg(target_arch = "wasm32")]
+    pub async fn close(&mut self, frame: Option<CloseFrame<'static>>) -> Result<(), ClientError> {
+        self.close_frame = frame.clone();
         self.socket
             .close()
             .await

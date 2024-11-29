@@ -80,3 +80,13 @@ jobs:
         with:
           github_token: ${{ secrets.github_token }}
           locale: "US"
+
+  wasm:
+    name: "wasm"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: "wasm-pack"
+        run: wasm-pack build --target web --dev
