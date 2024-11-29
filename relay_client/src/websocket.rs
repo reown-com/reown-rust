@@ -28,15 +28,15 @@ use {
         oneshot,
     },
 };
-pub use {
-    fetch::*,
-    inbound::*,
-    outbound::*,
-    stream::*,
-    tokio_tungstenite_wasm::CloseFrame,
-};
-
+pub use {fetch::*, inbound::*, outbound::*, stream::*};
+#[cfg(not(target_arch = "wasm32"))]
+pub type TransportError = tokio_tungstenite::tungstenite::Error;
+#[cfg(not(target_arch = "wasm32"))]
+pub use tokio_tungstenite::tungstenite::protocol::CloseFrame;
+#[cfg(target_arch = "wasm32")]
 pub type TransportError = tokio_tungstenite_wasm::Error;
+#[cfg(target_arch = "wasm32")]
+pub use tokio_tungstenite_wasm::CloseFrame;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WebsocketClientError {
@@ -149,7 +149,12 @@ impl Client {
     {
         let (control_tx, control_rx) = mpsc::unbounded_channel();
 
-        tokio::spawn(connection_event_loop(control_rx, handler));
+        let fut = connection_event_loop(control_rx, handler);
+        #[cfg(target_arch = "wasm32")]
+        wasm_bindgen_futures::spawn_local(fut);
+
+        #[cfg(not(target_arch = "wasm32"))]
+        tokio::spawn(fut);
 
         Self { control_tx }
     }
@@ -300,7 +305,7 @@ impl Client {
     /// Opens a connection to the Relay.
     pub async fn connect(&self, opts: &ConnectionOptions) -> Result<(), ClientError> {
         let (tx, rx) = oneshot::channel();
-        let request = opts.as_url()?;
+        let request = opts.as_ws_request()?;
 
         if self
             .control_tx

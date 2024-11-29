@@ -1,4 +1,3 @@
-use url::Url;
 use {
     super::{
         outbound::OutboundRequest,
@@ -22,7 +21,7 @@ use {
 
 pub(super) enum ConnectionControl {
     Connect {
-        request: Url,
+        request: HttpRequest<()>,
         tx: oneshot::Sender<Result<(), ClientError>>,
     },
 
@@ -108,7 +107,7 @@ impl Connection {
         Self { stream: None }
     }
 
-    async fn connect(&mut self, request: Url) -> Result<(), ClientError> {
+    async fn connect(&mut self, request: HttpRequest<()>) -> Result<(), ClientError> {
         if let Some(mut stream) = self.stream.take() {
             stream.close(None).await?;
         }

@@ -1,4 +1,12 @@
-use url::Url;
+#[cfg(not(target_arch = "wasm32"))]
+use tokio_tungstenite::{
+    connect_async,
+    tungstenite::{protocol::CloseFrame, Message},
+    MaybeTlsStream,
+    WebSocketStream,
+};
+#[cfg(target_arch = "wasm32")]
+use tokio_tungstenite_wasm::{connect as connect_async, Message, WebSocketStream};
 use {
     super::{
         inbound::InboundRequest,
@@ -19,26 +27,23 @@ use {
         task::{Context, Poll},
     },
     tokio::{
+        net::TcpStream,
         sync::{
             mpsc,
             mpsc::{UnboundedReceiver, UnboundedSender},
             oneshot,
         },
     },
-    tokio_tungstenite_wasm::{
-        CloseFrame,
-        connect as connect_async,
-        Message,
-        WebSocketStream,
-    },
 };
-
+#[cfg(not(target_arch = "wasm32"))]
+pub type SocketStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
+#[cfg(target_arch = "wasm32")]
 pub type SocketStream = WebSocketStream;
 
 /// Opens a connection to the Relay and returns [`ClientStream`] for the
 /// connection.
-pub async fn create_stream(request: Url) -> Result<ClientStream, WebsocketClientError> {
-    let socket = connect_async(request)
+pub async fn create_stream(request: HttpRequest<()>) -> Result<ClientStream, WebsocketClientError> {
+    let (socket, _) = connect_async(request)
         .await
         .map_err(WebsocketClientError::ConnectionFailed)?;
 
@@ -143,7 +148,7 @@ impl ClientStream {
     pub async fn close(&mut self, frame: Option<CloseFrame<'static>>) -> Result<(), ClientError> {
         self.close_frame = frame.clone();
         self.socket
-            .close()
+            .close(frame)
             .await
             .map_err(|err| WebsocketClientError::ClosingFailed(err).into())
     }
@@ -182,7 +187,6 @@ impl ClientStream {
 
                         Payload::Response(response) => {
                             let id = response.id();
-
                             if id.is_zero() {
                                 return match response {
                                     Response::Error(response) => Some(StreamEvent::InboundError(
@@ -223,6 +227,8 @@ impl ClientStream {
                     self.close_frame = frame.clone();
                     Some(StreamEvent::ConnectionClosed(frame.clone()))
                 }
+
+                _ => None,
             },
 
             Err(error) => Some(StreamEvent::InboundError(
@@ -299,7 +305,7 @@ impl Stream for ClientStream {
 
 impl FusedStream for ClientStream {
     fn is_terminated(&self) -> bool {
-        false
+        self.socket.is_terminated()
     }
 }
 

@@ -8,16 +8,20 @@ license = "Apache-2.0"
 
 [workspace]
 members = ["blockchain_api", "relay_client", "relay_rpc"]
+exclude = ["wasm_websocket_client"]
 
 [features]
 default = ["full"]
 full = ["client", "rpc"]
-client = ["dep:relay_client"]
-rpc = ["dep:relay_rpc"]
+wasm = ["relay_client/wasm", "client", "rpc"]
+wasm-debug = ["relay_client/wasm", "relay_client/wasm-debug", "client", "rpc"]
+client = ["relay_client"]
+rpc = ["relay_rpc"]
 
 [dependencies]
 relay_client = { path = "./relay_client", optional = true }
 relay_rpc = { path = "./relay_rpc", optional = true }
+
 
 [dev-dependencies]
 anyhow = "1"
