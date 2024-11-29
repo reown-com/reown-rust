@@ -7,8 +7,6 @@ license = "Apache-2.0"
 [features]
 default = ["tokio-tungstenite/native-tls", "tokio-tungstenite/url"]
 rustls = ["tokio-tungstenite/rustls-tls-native-roots", "tokio-tungstenite/url"]
-wasm = ["wasm-bindgen-futures", "tokio-tungstenite-wasm", "getrandom"]
-wasm-debug = ["web-sys"]
 
 [dependencies]
 relay_rpc = { path = "../relay_rpc" }
@@ -27,15 +25,13 @@ reqwest = { version = "0.12.2", features = ["json"] }
 
 # WebSocket client dependencies.
 tokio = { version = "1", features = ["rt", "time", "sync", "macros"] }
+futures-channel = "0.3"
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio-tungstenite = { version = "0.24", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tokio-tungstenite-wasm = { version = "0.3", optional = true }
-
-futures-channel = "0.3"
-
-# WASM dependencies.
 wasm-bindgen-futures = { version = "0.4" , optional = true }
 web-sys = { version = "0.3" , optional = true, features = ["ConsoleEvent"] }
 getrandom = { version = "0.2" , optional = true, features = ["wasm-bindgen", "js"]}
