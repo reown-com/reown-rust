@@ -10,8 +10,6 @@ use {
     std::{fmt::Display, time::Duration},
 };
 
-// use web_sys::console;
-
 #[cfg(feature = "cacao")]
 pub mod cacao;
 pub mod did;
@@ -35,7 +33,7 @@ pub const DEFAULT_TOKEN_AUD: &str = RELAY_WEBSOCKET_ADDRESS;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct SerializedAuthToken(pub String);
+pub struct SerializedAuthToken(String);
 
 impl Display for SerializedAuthToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -83,11 +81,9 @@ impl AuthToken {
     }
 
     pub fn as_jwt(&self, key: &SigningKey) -> Result<SerializedAuthToken, Error> {
-        // console::log_1(&"begin jwt".into());
         let iat = self.iat.unwrap_or_else(Utc::now);
-        // console::log_1(&"iat".into());
         let aud = self.aud.as_deref().unwrap_or(DEFAULT_TOKEN_AUD);
-        // console::log_1(&"aud".into());
+
         encode_auth_token(key, &self.sub, aud, iat, self.ttl)
     }
 }
@@ -107,7 +103,6 @@ pub fn encode_auth_token(
         .map_err(|_| Error::InvalidDuration)?
         .map(|ttl| (iat + ttl).timestamp());
 
-    // console::log_1(&"exp done".into());
     let claims = {
         let data = JwtBasicClaims {
             iss: DecodedClientId::from_key(&key.verifying_key()).into(),
