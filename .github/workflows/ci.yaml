@@ -91,4 +91,4 @@ jobs:
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: "wasm-pack"
-        run: wasm-pack build --target web --dev
+        run: cd wasm_websocket_client && wasm-pack build --target web
