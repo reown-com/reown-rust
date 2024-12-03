@@ -7,8 +7,7 @@ authors = ["WalletConnect Team"]
 license = "Apache-2.0"
 
 [workspace]
-members = ["blockchain_api", "relay_client", "relay_rpc"]
-exclude = ["wasm_websocket_client"]
+members = ["blockchain_api", "relay_client", "relay_rpc", "wasm_websocket_demo"]
 
 [features]
 default = ["full"]
