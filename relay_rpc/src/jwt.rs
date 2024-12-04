@@ -67,7 +67,7 @@ impl Default for JwtHeader<'_> {
     }
 }
 
-impl<'a> JwtHeader<'a> {
+impl JwtHeader<'_> {
     pub fn is_valid(&self) -> bool {
         self.typ == JWT_HEADER_TYP && self.alg == JWT_HEADER_ALG
     }
