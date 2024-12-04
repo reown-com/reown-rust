@@ -1,21 +1,25 @@
 mod utils;
 
-use std::fmt::Display;
-use std::fmt::Formatter;
-use walletconnect_sdk::client::{
-    error::ClientError,
-    websocket::{Client, CloseFrame, ConnectionHandler, PublishedMessage},
-    ConnectionOptions,
-};
-use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::spawn_local;
-use web_sys::console;
-
-use rand::rngs::OsRng;
-use std::time::Duration;
-use walletconnect_sdk::rpc::{
-    auth::{ed25519_dalek::SigningKey, AuthToken},
-    domain::Topic,
+use {
+    rand::rngs::OsRng,
+    std::{
+        fmt::{Display, Formatter},
+        time::Duration,
+    },
+    walletconnect_sdk::{
+        client::{
+            error::ClientError,
+            websocket::{Client, CloseFrame, ConnectionHandler, PublishedMessage},
+            ConnectionOptions,
+        },
+        rpc::{
+            auth::{ed25519_dalek::SigningKey, AuthToken},
+            domain::Topic,
+        },
+    },
+    wasm_bindgen::prelude::*,
+    wasm_bindgen_futures::spawn_local,
+    web_sys::console,
 };
 
 enum ClientId {
@@ -32,7 +36,7 @@ impl Display for ClientId {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
             ClientId::WC1 => write!(f, "wc1"),
-            ClientId::WC2 => write!(f, "wc2")
+            ClientId::WC2 => write!(f, "wc2"),
         }
     }
 }
@@ -45,6 +49,7 @@ impl Handler {
     fn new(name: ClientId) -> Self {
         Self { client_id: name }
     }
+
     fn error_div(&self) -> String {
         self.client_id.div("error")
     }
@@ -145,4 +150,3 @@ pub fn run() {
         console::log_1(&"done".into());
     });
 }
-

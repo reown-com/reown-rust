@@ -43,6 +43,7 @@ jobs:
             rust: stable
     env:
       RUST_BACKTRACE: full
+      PROJECT_ID: "dummy"
     steps:
       - uses: actions/checkout@v3
 
