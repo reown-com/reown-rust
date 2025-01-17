@@ -125,6 +125,7 @@ impl Client {
             ttl_secs,
             tag,
             prompt,
+            tvf_data: None,
         })
         .await
         .map(|_| ())

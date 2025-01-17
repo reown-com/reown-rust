@@ -11,6 +11,13 @@ fn request() {
             ttl_secs: 12,
             tag: 0,
             prompt: false,
+            tvf_data: Some(TvfData {
+                correlation_id: Some("correlation_id".into()),
+                chain_id: Some("chain_id".into()),
+                rpc_methods: Some(vec!["rpc_method".into()]),
+                tx_hashes: Some(vec!["tx_hash".into()]),
+                contract_addresses: Some(vec!["contract_address".into()]),
+            }),
         }),
     ));
 
@@ -18,7 +25,7 @@ fn request() {
 
     assert_eq!(
         &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"irn_publish","params":{"topic":"topic","message":"payload","attestation":"attestation_payload","ttl":12,"tag":0}}"#
+        r#"{"id":1,"jsonrpc":"2.0","method":"irn_publish","params":{"topic":"topic","message":"payload","attestation":"attestation_payload","ttl":12,"tag":0,"correlationId":"correlation_id","chainId":"chain_id","rpcMethods":["rpc_method"],"txHashes":["tx_hash"],"contractAddresses":["contract_address"]}}"#
     );
 
     let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
@@ -294,6 +301,7 @@ fn validation() {
             ttl_secs: 0,
             tag: 0,
             prompt: false,
+            tvf_data: None,
         }),
     };
     assert_eq!(request.validate(), Err(PayloadError::InvalidRequestId));
@@ -309,6 +317,7 @@ fn validation() {
             ttl_secs: 0,
             tag: 0,
             prompt: false,
+            tvf_data: None,
         }),
     };
     assert_eq!(request.validate(), Err(PayloadError::InvalidJsonRpcVersion));
@@ -324,6 +333,7 @@ fn validation() {
             ttl_secs: 0,
             tag: 0,
             prompt: false,
+            tvf_data: None,
         }),
     };
     assert_eq!(request.validate(), Ok(()));
@@ -339,6 +349,7 @@ fn validation() {
             ttl_secs: 0,
             tag: 0,
             prompt: false,
+            tvf_data: None,
         }),
     };
     assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));

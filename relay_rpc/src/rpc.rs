@@ -88,6 +88,12 @@ impl Payload {
             Self::Response(response) => response.validate(),
         }
     }
+
+    pub fn strip_analytics(&mut self) {
+        if let Self::Request(req) = self {
+            req.strip_analytics();
+        }
+    }
 }
 
 impl<T> From<T> for Payload
@@ -520,6 +526,16 @@ impl ServiceRequest for BatchReceiveMessages {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TvfData {
+    pub correlation_id: Option<Arc<str>>,
+    pub chain_id: Option<Arc<str>>,
+    pub rpc_methods: Option<Vec<Arc<str>>>,
+    pub tx_hashes: Option<Vec<Arc<str>>>,
+    pub contract_addresses: Option<Vec<Arc<str>>>,
+}
+
 /// Data structure representing publish request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Publish {
@@ -545,6 +561,9 @@ pub struct Publish {
     /// webhook to a client through a push server.
     #[serde(default, skip_serializing_if = "is_default")]
     pub prompt: bool,
+
+    #[serde(default, flatten, skip_serializing_if = "is_default")]
+    pub tvf_data: Option<TvfData>,
 }
 
 impl Publish {
@@ -858,6 +877,12 @@ impl Request {
             Params::WatchRegister(params) => params.validate(),
             Params::WatchUnregister(params) => params.validate(),
             Params::Subscription(params) => params.validate(),
+        }
+    }
+
+    pub fn strip_analytics(&mut self) {
+        if let Params::Publish(params) = &mut self.params {
+            params.tvf_data = None;
         }
     }
 }

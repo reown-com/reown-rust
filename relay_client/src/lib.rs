@@ -48,6 +48,13 @@ pub struct ConnectionOptions {
     /// Optional origin of the request. Subject to allow-list validation.
     pub origin: Option<String>,
 
+    /// Optional package name. Used instead of `origin` for allow-list
+    /// validation.
+    pub package_name: Option<String>,
+
+    /// Optional bundle ID. Used instead of `origin` for allow-list validation.
+    pub bundle_id: Option<String>,
+
     /// Optional user agent parameters.
     pub user_agent: Option<UserAgent>,
 }
@@ -60,11 +67,23 @@ impl ConnectionOptions {
             auth: Authorization::Query(auth),
             origin: None,
             user_agent: None,
+            package_name: None,
+            bundle_id: None,
         }
     }
 
     pub fn with_address(mut self, address: impl Into<String>) -> Self {
         self.address = address.into();
+        self
+    }
+
+    pub fn with_package_name(mut self, package_name: impl Into<String>) -> Self {
+        self.package_name = Some(package_name.into());
+        self
+    }
+
+    pub fn with_bundle_id(mut self, bundle_id: impl Into<String>) -> Self {
+        self.bundle_id = Some(bundle_id.into());
         self
     }
 
@@ -85,6 +104,8 @@ impl ConnectionOptions {
             project_id: &'a ProjectId,
             auth: Option<&'a SerializedAuthToken>,
             ua: Option<&'a UserAgent>,
+            package_name: Option<&'a str>,
+            bundle_id: Option<&'a str>,
         }
 
         let query = serde_qs::to_string(&QueryParams {
@@ -95,6 +116,8 @@ impl ConnectionOptions {
                 None
             },
             ua: self.user_agent.as_ref(),
+            package_name: self.package_name.as_deref(),
+            bundle_id: self.bundle_id.as_deref(),
         })
         .map_err(RequestBuildError::Query)?;
 
