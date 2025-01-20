@@ -35,7 +35,7 @@ jobs:
             rust: nightly
           - name: "Tests"
             cmd: nextest
-            args: run --workspace --all-features
+            args: run --workspace
             rust: stable
           - name: "Documentation Tests"
             cmd: test

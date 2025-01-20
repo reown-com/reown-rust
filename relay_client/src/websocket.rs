@@ -168,6 +168,7 @@ impl Client {
             ttl_secs: ttl.as_secs() as u32,
             tag,
             prompt,
+            analytics: None,
         });
 
         self.request(request);

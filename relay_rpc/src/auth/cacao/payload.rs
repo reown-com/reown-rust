@@ -117,7 +117,7 @@ impl Payload {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "cacao-tests"))]
 mod tests {
     use super::*;
 

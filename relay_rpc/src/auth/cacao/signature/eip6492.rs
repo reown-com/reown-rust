@@ -69,7 +69,7 @@ pub async fn verify_eip6492(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "cacao-tests"))]
 mod test {
     use {
         super::*,

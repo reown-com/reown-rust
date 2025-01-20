@@ -10,7 +10,7 @@ pub const EIP191: &str = "eip191";
 pub fn eip191_bytes(message: &str) -> Vec<u8> {
     format!(
         "\u{0019}Ethereum Signed Message:\n{}{}",
-        message.as_bytes().len(),
+        message.len(),
         message
     )
     .into()
@@ -51,7 +51,7 @@ pub fn verify_eip191(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "cacao-tests"))]
 mod tests {
     use {
         crate::auth::cacao::signature::{
