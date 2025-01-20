@@ -51,7 +51,7 @@ pub fn verify_eip191(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "cacao-tests"))]
 mod tests {
     use {
         crate::auth::cacao::signature::{

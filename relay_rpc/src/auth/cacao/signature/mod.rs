@@ -17,7 +17,7 @@ pub mod eip191;
 pub mod eip6492;
 pub mod get_rpc_url;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "cacao-tests"))]
 mod test_helpers;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Hash)]

@@ -180,7 +180,7 @@ impl MessageIdGenerator {
     pub fn next(&self) -> MessageId {
         let next = self.next.fetch_add(1, Ordering::Relaxed) as u64;
         let timestamp = chrono::Utc::now().timestamp_millis() as u64;
-        let id = timestamp << 8 | next;
+        let id = (timestamp << 8) | next;
 
         MessageId::new(id)
     }
