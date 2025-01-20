@@ -1,8 +1,7 @@
 use {
     crate::{
         error::{BoxError, ClientError, Error},
-        ConnectionOptions,
-        MessageIdGenerator,
+        ConnectionOptions, MessageIdGenerator,
     },
     http::{HeaderMap, StatusCode},
     relay_rpc::{
@@ -125,7 +124,7 @@ impl Client {
             ttl_secs,
             tag,
             prompt,
-            tvf_data: None,
+            analytics: None,
         })
         .await
         .map(|_| ())

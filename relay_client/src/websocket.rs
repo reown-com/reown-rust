@@ -7,19 +7,9 @@ use {
     relay_rpc::{
         domain::{MessageId, SubscriptionId, Topic},
         rpc::{
-            BatchFetchMessages,
-            BatchReceiveMessages,
-            BatchSubscribe,
-            BatchSubscribeBlocking,
-            BatchUnsubscribe,
-            FetchMessages,
-            Publish,
-            Receipt,
-            Subscribe,
-            SubscribeBlocking,
-            Subscription,
-            SubscriptionError,
-            Unsubscribe,
+            BatchFetchMessages, BatchReceiveMessages, BatchSubscribe, BatchSubscribeBlocking,
+            BatchUnsubscribe, FetchMessages, Publish, Receipt, Subscribe, SubscribeBlocking,
+            Subscription, SubscriptionError, Unsubscribe,
         },
     },
     std::{future::Future, sync::Arc, time::Duration},
@@ -29,10 +19,7 @@ use {
     },
 };
 pub use {
-    fetch::*,
-    inbound::*,
-    outbound::*,
-    stream::*,
+    fetch::*, inbound::*, outbound::*, stream::*,
     tokio_tungstenite::tungstenite::protocol::CloseFrame,
 };
 
@@ -168,7 +155,7 @@ impl Client {
             ttl_secs: ttl.as_secs() as u32,
             tag,
             prompt,
-            tvf_data: None,
+            analytics: None,
         });
 
         self.request(request);

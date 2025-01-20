@@ -11,7 +11,7 @@ fn request() {
             ttl_secs: 12,
             tag: 0,
             prompt: false,
-            tvf_data: Some(TvfData {
+            analytics: Some(AnalyticsData {
                 correlation_id: Some("correlation_id".into()),
                 chain_id: Some("chain_id".into()),
                 rpc_methods: Some(vec!["rpc_method".into()]),
@@ -75,12 +75,14 @@ fn response_result() {
 
 #[test]
 fn response_error() {
-    let payload: Payload =
-        Payload::Response(Response::Error(ErrorResponse::new(1.into(), ErrorData {
+    let payload: Payload = Payload::Response(Response::Error(ErrorResponse::new(
+        1.into(),
+        ErrorData {
             code: 32,
             data: None,
             message: "some message".into(),
-        })));
+        },
+    )));
 
     let serialized = serde_json::to_string(&payload).unwrap();
 
@@ -301,7 +303,7 @@ fn validation() {
             ttl_secs: 0,
             tag: 0,
             prompt: false,
-            tvf_data: None,
+            analytics: None,
         }),
     };
     assert_eq!(request.validate(), Err(PayloadError::InvalidRequestId));
@@ -317,7 +319,7 @@ fn validation() {
             ttl_secs: 0,
             tag: 0,
             prompt: false,
-            tvf_data: None,
+            analytics: None,
         }),
     };
     assert_eq!(request.validate(), Err(PayloadError::InvalidJsonRpcVersion));
@@ -333,7 +335,7 @@ fn validation() {
             ttl_secs: 0,
             tag: 0,
             prompt: false,
-            tvf_data: None,
+            analytics: None,
         }),
     };
     assert_eq!(request.validate(), Ok(()));
@@ -349,7 +351,7 @@ fn validation() {
             ttl_secs: 0,
             tag: 0,
             prompt: false,
-            tvf_data: None,
+            analytics: None,
         }),
     };
     assert_eq!(request.validate(), Err(PayloadError::InvalidTopic));

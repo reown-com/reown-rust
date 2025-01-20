@@ -528,7 +528,7 @@ impl ServiceRequest for BatchReceiveMessages {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TvfData {
+pub struct AnalyticsData {
     pub correlation_id: Option<Arc<str>>,
     pub chain_id: Option<Arc<str>>,
     pub rpc_methods: Option<Vec<Arc<str>>>,
@@ -563,7 +563,7 @@ pub struct Publish {
     pub prompt: bool,
 
     #[serde(default, flatten, skip_serializing_if = "is_default")]
-    pub tvf_data: Option<TvfData>,
+    pub analytics: Option<AnalyticsData>,
 }
 
 impl Publish {
@@ -882,7 +882,7 @@ impl Request {
 
     pub fn strip_analytics(&mut self) {
         if let Params::Publish(params) = &mut self.params {
-            params.tvf_data = None;
+            params.analytics = None;
         }
     }
 }
