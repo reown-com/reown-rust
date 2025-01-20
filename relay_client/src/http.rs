@@ -1,7 +1,8 @@
 use {
     crate::{
         error::{BoxError, ClientError, Error},
-        ConnectionOptions, MessageIdGenerator,
+        ConnectionOptions,
+        MessageIdGenerator,
     },
     http::{HeaderMap, StatusCode},
     relay_rpc::{
