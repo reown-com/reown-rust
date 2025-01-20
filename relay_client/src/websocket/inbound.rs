@@ -1,3 +1,7 @@
+#[cfg(not(target_arch = "wasm32"))]
+use tokio_tungstenite::tungstenite::Message;
+#[cfg(target_arch = "wasm32")]
+use tokio_tungstenite_wasm::Message;
 use {
     crate::ClientError,
     relay_rpc::{
@@ -5,9 +9,7 @@ use {
         rpc::{self, ErrorResponse, Payload, Response, ServiceRequest, SuccessfulResponse},
     },
     tokio::sync::mpsc::UnboundedSender,
-    tokio_tungstenite::tungstenite::Message,
 };
-
 /// The lower-level inbound RPC request.
 ///
 /// Provides access to the request payload (via [`InboundRequest::data()`]) and

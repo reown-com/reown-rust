@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WASM WebSocket Client Example</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<h1>WASM WebSocket Client Example</h1>
+<script type="module">
+    import init from './pkg/wasm_websocket_client.js';
+    init()
+        .then(() => {
+            console.log('WASM module loaded successfully');
+        })
+        .catch(err => {
+            console.error('Failed to load WASM module:', err);
+            document.getElementById('result').innerHTML = `<p style="color: red;">Failed to load WASM module: ${err}</p>`;
+        });
+</script>
+<div class="grid-container">
+    <div class="grid-item">client</div>
+    <div class="grid-item">state</div>
+    <div class="grid-item">topic</div>
+    <div class="grid-item">message</div>
+    <div class="grid-item">error</div>
+
+    <div class="grid-item">wc1</div>
+    <div id="wc1connect" class="grid-item">disconnected</div>
+    <div id="wc1topic" class="grid-item"></div>
+    <div id="wc1message" class="grid-item"></div>
+    <div id="wc1error" class="grid-item"></div>
+
+    <div class="grid-item">wc2</div>
+    <div id="wc2connect" class="grid-item">disconnected</div>
+    <div id="wc2topic" class="grid-item"></div>
+    <div id="wc2message" class="grid-item"></div>
+    <div id="wc2error" class="grid-item"></div>
+</div>
+<div id="result">
+</div>
+</body>
+</html>
