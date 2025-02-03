@@ -529,7 +529,7 @@ impl ServiceRequest for BatchReceiveMessages {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalyticsData {
-    pub correlation_id: Option<Arc<str>>,
+    pub correlation_id: Option<i64>,
     pub chain_id: Option<Arc<str>>,
     pub rpc_methods: Option<Vec<Arc<str>>>,
     pub tx_hashes: Option<Vec<Arc<str>>>,

@@ -12,7 +12,7 @@ fn request() {
             tag: 0,
             prompt: false,
             analytics: Some(AnalyticsData {
-                correlation_id: Some("correlation_id".into()),
+                correlation_id: Some(123456789),
                 chain_id: Some("chain_id".into()),
                 rpc_methods: Some(vec!["rpc_method".into()]),
                 tx_hashes: Some(vec!["tx_hash".into()]),
@@ -25,7 +25,7 @@ fn request() {
 
     assert_eq!(
         &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"irn_publish","params":{"topic":"topic","message":"payload","attestation":"attestation_payload","ttl":12,"tag":0,"correlationId":"correlation_id","chainId":"chain_id","rpcMethods":["rpc_method"],"txHashes":["tx_hash"],"contractAddresses":["contract_address"]}}"#
+        r#"{"id":1,"jsonrpc":"2.0","method":"irn_publish","params":{"topic":"topic","message":"payload","attestation":"attestation_payload","ttl":12,"tag":0,"correlationId":123456789,"chainId":"chain_id","rpcMethods":["rpc_method"],"txHashes":["tx_hash"],"contractAddresses":["contract_address"]}}"#
     );
 
     let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
