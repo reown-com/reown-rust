@@ -127,6 +127,7 @@ impl ConnectionOptions {
         Ok(url)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn as_ws_request(&self) -> Result<HttpRequest<()>, RequestBuildError> {
         use {
             crate::websocket::WebsocketClientError,
@@ -141,6 +142,20 @@ impl ConnectionOptions {
 
         self.update_request_headers(request.headers_mut())?;
 
+        Ok(request)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn as_ws_request(&self) -> Result<HttpRequest<()>, RequestBuildError> {
+        use crate::websocket::WebsocketClientError;
+
+        let url = self.as_url()?;
+        let mut request = HttpRequest::builder()
+            .uri(format!("{}", url))
+            .body(())
+            .map_err(WebsocketClientError::HttpErr)?;
+
+        self.update_request_headers(request.headers_mut())?;
         Ok(request)
     }
 
