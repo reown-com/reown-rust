@@ -1,4 +1,4 @@
 await-holding-invalid-types = [
-  "tracing::trace::Entered",
-  "tracing::trace::EnteredSpan",
+    "tracing::trace::Entered",
+    "tracing::trace::EnteredSpan",
 ]

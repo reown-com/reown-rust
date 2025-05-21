@@ -130,7 +130,7 @@ impl Cacao {
         );
 
         if let Some(statement) = &self.p.statement {
-            writeln!(message, "{}", statement)?;
+            writeln!(message, "{statement}")?;
         }
 
         write!(
@@ -144,15 +144,15 @@ impl Cacao {
         )?;
 
         if let Some(exp) = &self.p.exp {
-            write!(message, "\nExpiration Time: {}", exp)?;
+            write!(message, "\nExpiration Time: {exp}")?;
         }
 
         if let Some(nbf) = &self.p.nbf {
-            write!(message, "\nNot Before: {}", nbf)?;
+            write!(message, "\nNot Before: {nbf}")?;
         }
 
         if let Some(request_id) = &self.p.request_id {
-            write!(message, "\nRequest ID: {}", request_id)?;
+            write!(message, "\nRequest ID: {request_id}")?;
         }
 
         if let Some(resources) = &self.p.resources {
@@ -160,7 +160,7 @@ impl Cacao {
                 write!(message, "\nResources:")?;
 
                 for resource in resources {
-                    write!(message, "\n- {}", resource)?;
+                    write!(message, "\n- {resource}")?;
                 }
             }
         }

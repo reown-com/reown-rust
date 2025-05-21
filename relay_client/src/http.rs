@@ -100,6 +100,40 @@ impl Client {
         })
     }
 
+    pub async fn create_topic(&self, topic: Topic) -> Response<rpc::CreateTopic> {
+        self.request(rpc::CreateTopic { topic }).await
+    }
+
+    pub async fn propose_session(
+        &self,
+        pairing_topic: Topic,
+        session_proposal: impl Into<Arc<str>>,
+        attestation: impl Into<Option<Arc<str>>>,
+    ) -> Response<rpc::ProposeSession> {
+        self.request(rpc::ProposeSession {
+            pairing_topic,
+            session_proposal: session_proposal.into(),
+            attestation: attestation.into(),
+        })
+        .await
+    }
+
+    pub async fn approve_session(
+        &self,
+        pairing_topic: Topic,
+        session_topic: Topic,
+        pairing_response: impl Into<Arc<str>>,
+        session_settlement_request: impl Into<Arc<str>>,
+    ) -> Response<rpc::ApproveSession> {
+        self.request(rpc::ApproveSession {
+            pairing_topic,
+            session_topic,
+            pairing_response: pairing_response.into(),
+            session_settlement_request: session_settlement_request.into(),
+        })
+        .await
+    }
+
     /// Publishes a message over the network on given topic.
     pub async fn publish(
         &self,
