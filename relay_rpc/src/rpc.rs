@@ -265,6 +265,7 @@ pub enum ProposeSessionError {
 
 /// Propose session request parameters.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProposeSession {
     pub pairing_topic: Topic,
     pub session_proposal: Arc<str>,
@@ -306,6 +307,7 @@ pub enum ApproveSessionError {
 
 /// Approve session request parameters.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ApproveSession {
     pub pairing_topic: Topic,
     pub session_topic: Topic,
@@ -889,11 +891,11 @@ pub enum Params {
     CreateTopic(CreateTopic),
 
     /// Parameters to propose session.
-    #[serde(rename = "wc_proposeSession", alias = "wc_createConnection")]
+    #[serde(rename = "wc_proposeSession")]
     ProposeSession(ProposeSession),
 
     /// Parameters to approve session.
-    #[serde(rename = "wc_approveSession", alias = "wc_apprroveConnection")]
+    #[serde(rename = "wc_approveSession")]
     ApproveSession(ApproveSession),
 
     /// Parameters to subscribe.
