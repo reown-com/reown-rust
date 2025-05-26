@@ -40,6 +40,7 @@ pub type SocketStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 pub async fn create_stream(request: HttpRequest<()>) -> Result<ClientStream, WebsocketClientError> {
     let (socket, _) = connect_async(request)
         .await
+        .map_err(Box::new)
         .map_err(WebsocketClientError::ConnectionFailed)?;
 
     Ok(ClientStream::new(socket))
@@ -145,7 +146,7 @@ impl ClientStream {
         self.socket
             .close(frame)
             .await
-            .map_err(|err| WebsocketClientError::ClosingFailed(err).into())
+            .map_err(|err| WebsocketClientError::ClosingFailed(Box::new(err)).into())
     }
 
     fn parse_inbound(&mut self, result: Result<Message, TransportError>) -> Option<StreamEvent> {
@@ -244,19 +245,19 @@ impl ClientStream {
                 Poll::Ready(Ok(())) => {
                     if let Poll::Ready(Some(next_message)) = self.outbound_rx.poll_recv(cx) {
                         if let Err(err) = self.socket.start_send_unpin(next_message) {
-                            return Poll::Ready(Err(err));
+                            return Poll::Ready(Err(Box::new(err)));
                         }
 
                         should_flush = true;
                     } else if should_flush {
                         // We've sent out some messages, now we need to flush.
-                        return self.socket.poll_flush_unpin(cx);
+                        return self.socket.poll_flush_unpin(cx).map_err(Box::new);
                     } else {
                         return Poll::Pending;
                     }
                 }
 
-                Poll::Ready(Err(err)) => return Poll::Ready(Err(err)),
+                Poll::Ready(Err(err)) => return Poll::Ready(Err(Box::new(err))),
 
                 // The sink is not ready.
                 Poll::Pending => return Poll::Pending,
@@ -276,6 +277,8 @@ impl Stream for ClientStream {
         while let Poll::Ready(data) = self.socket.poll_next_unpin(cx) {
             match data {
                 Some(result) => {
+                    let result = result.map_err(Box::new);
+
                     if let Some(event) = self.parse_inbound(result) {
                         return Poll::Ready(Some(event));
                     }

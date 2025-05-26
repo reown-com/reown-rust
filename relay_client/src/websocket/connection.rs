@@ -3,7 +3,7 @@ use {
         outbound::OutboundRequest,
         stream::{create_stream, ClientStream},
         ConnectionHandler,
-        TransportError,
+        RawTransportError,
         WebsocketClientError,
     },
     crate::{
@@ -123,7 +123,10 @@ impl Connection {
         match stream {
             Some(mut stream) => stream.close(None).await,
 
-            None => Err(WebsocketClientError::ClosingFailed(TransportError::AlreadyClosed).into()),
+            None => Err(WebsocketClientError::ClosingFailed(Box::new(
+                RawTransportError::AlreadyClosed,
+            ))
+            .into()),
         }
     }
 

@@ -137,6 +137,7 @@ impl ConnectionOptions {
 
         let mut request = url
             .into_client_request()
+            .map_err(Box::new)
             .map_err(WebsocketClientError::Transport)?;
 
         self.update_request_headers(request.headers_mut())?;

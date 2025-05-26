@@ -39,7 +39,8 @@ pub use {
     tokio_tungstenite::tungstenite::protocol::CloseFrame,
 };
 
-pub type TransportError = tokio_tungstenite::tungstenite::Error;
+pub type RawTransportError = tokio_tungstenite::tungstenite::Error;
+pub type TransportError = Box<RawTransportError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WebsocketClientError {
