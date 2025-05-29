@@ -34,6 +34,77 @@ fn request() {
 }
 
 #[test]
+fn create_topic() {
+    let payload: Payload = Payload::Request(Request::new(
+        1.into(),
+        Params::CreateTopic(CreateTopic {
+            topic: "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840".into(),
+        }),
+    ));
+
+    let serialized = serde_json::to_string(&payload).unwrap();
+
+    assert_eq!(
+        &serialized,
+        r#"{"id":1,"jsonrpc":"2.0","method":"wc_createTopic","params":{"topic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840"}}"#
+    );
+
+    let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(&payload, &deserialized)
+}
+
+#[test]
+fn propose_session() {
+    let payload: Payload = Payload::Request(Request::new(
+        1.into(),
+        Params::ProposeSession(ProposeSession {
+            pairing_topic: "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840"
+                .into(),
+            session_proposal: "proposal".into(),
+            attestation: Some("attestation".into()),
+        }),
+    ));
+
+    let serialized = serde_json::to_string(&payload).unwrap();
+
+    assert_eq!(
+        &serialized,
+        r#"{"id":1,"jsonrpc":"2.0","method":"wc_proposeSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionProposal":"proposal","attestation":"attestation"}}"#
+    );
+
+    let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(&payload, &deserialized)
+}
+
+#[test]
+fn approve_session() {
+    let payload: Payload = Payload::Request(Request::new(
+        1.into(),
+        Params::ApproveSession(ApproveSession {
+            pairing_topic: "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840"
+                .into(),
+            session_topic: "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841"
+                .into(),
+            pairing_response: "pairing_response".into(),
+            session_settlement_request: "session_settlement_request".into(),
+        }),
+    ));
+
+    let serialized = serde_json::to_string(&payload).unwrap();
+
+    assert_eq!(
+        &serialized,
+        r#"{"id":1,"jsonrpc":"2.0","method":"wc_approveSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841","pairingResponse":"pairing_response","sessionSettlementRequest":"session_settlement_request"}}"#
+    );
+
+    let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(&payload, &deserialized)
+}
+
+#[test]
 fn subscribe() {
     let payload: Payload = Payload::Request(Request::new(
         1659980684711969.into(),

@@ -151,7 +151,7 @@ async fn main() -> anyhow::Result<()> {
         .watch_register(
             WatchRegisterRequest {
                 service_url: server_url.clone(),
-                webhook_url: format!("{}{}", server_url, SUB_WH_PATH),
+                webhook_url: format!("{server_url}{SUB_WH_PATH}"),
                 watch_type: rpc::WatchType::Subscriber,
                 tags: vec![1100],
                 statuses: vec![rpc::WatchStatus::Queued],
@@ -173,7 +173,7 @@ async fn main() -> anyhow::Result<()> {
         .watch_register(
             WatchRegisterRequest {
                 service_url: server_url.clone(),
-                webhook_url: format!("{}{}", server_url, PUB_WH_PATH),
+                webhook_url: format!("{server_url}{PUB_WH_PATH}"),
                 watch_type: rpc::WatchType::Publisher,
                 tags: vec![1100],
                 statuses: vec![rpc::WatchStatus::Accepted],

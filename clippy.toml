@@ -1,4 +1,0 @@
-await-holding-invalid-types = [
-  "tracing::trace::Entered",
-  "tracing::trace::EnteredSpan",
-]

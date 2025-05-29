@@ -221,6 +221,125 @@ pub enum SubscriptionError {
     SubscriberLimitExceeded,
 }
 
+#[derive(Debug, thiserror::Error, strum::EnumString, strum::IntoStaticStr, PartialEq, Eq)]
+pub enum CreateTopicError {
+    #[error("Unknown error")]
+    Unknown,
+}
+
+/// Create topic request parameters. Registers the topic with the relay and
+/// subscribes the client.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CreateTopic {
+    pub topic: Topic,
+}
+
+impl ServiceRequest for CreateTopic {
+    type Error = CreateTopicError;
+    type Response = bool;
+
+    fn validate(&self) -> Result<(), PayloadError> {
+        self.topic
+            .decode()
+            .map_err(|_| PayloadError::InvalidTopic)?;
+
+        Ok(())
+    }
+
+    fn into_params(self) -> Params {
+        Params::CreateTopic(self)
+    }
+}
+
+#[derive(Debug, thiserror::Error, strum::EnumString, strum::IntoStaticStr, PartialEq, Eq)]
+pub enum ProposeSessionError {
+    #[error("Failed to create topic")]
+    CreateTopicFailed,
+
+    #[error("Failed to subscribe")]
+    SubscribeFailed,
+
+    #[error("Failed to publish session proposal")]
+    PublishFailed,
+}
+
+/// Propose session request parameters.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProposeSession {
+    pub pairing_topic: Topic,
+    pub session_proposal: Arc<str>,
+    pub attestation: Option<Arc<str>>,
+}
+
+impl ServiceRequest for ProposeSession {
+    type Error = ProposeSessionError;
+    type Response = bool;
+
+    fn validate(&self) -> Result<(), PayloadError> {
+        self.pairing_topic
+            .decode()
+            .map_err(|_| PayloadError::InvalidTopic)?;
+
+        if self.session_proposal.is_empty() {
+            Err(PayloadError::InvalidParams)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn into_params(self) -> Params {
+        Params::ProposeSession(self)
+    }
+}
+
+#[derive(Debug, thiserror::Error, strum::EnumString, strum::IntoStaticStr, PartialEq, Eq)]
+pub enum ApproveSessionError {
+    #[error("Failed to create topic")]
+    CreateTopicFailed,
+
+    #[error("Failed to subscribe")]
+    SubscribeFailed,
+
+    #[error("Failed to publish session proposal")]
+    PublishFailed,
+}
+
+/// Approve session request parameters.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApproveSession {
+    pub pairing_topic: Topic,
+    pub session_topic: Topic,
+    pub pairing_response: Arc<str>,
+    pub session_settlement_request: Arc<str>,
+}
+
+impl ServiceRequest for ApproveSession {
+    type Error = ApproveSessionError;
+    type Response = bool;
+
+    fn validate(&self) -> Result<(), PayloadError> {
+        self.pairing_topic
+            .decode()
+            .map_err(|_| PayloadError::InvalidTopic)?;
+
+        self.session_topic
+            .decode()
+            .map_err(|_| PayloadError::InvalidTopic)?;
+
+        if self.pairing_response.is_empty() || self.session_settlement_request.is_empty() {
+            Err(PayloadError::InvalidParams)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn into_params(self) -> Params {
+        Params::ApproveSession(self)
+    }
+}
+
 /// Subscription request parameters. This request does not require the
 /// subscription to be fully processed, and returns as soon as the server
 /// receives it.
@@ -767,6 +886,18 @@ pub struct SubscriptionData {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(tag = "method", content = "params")]
 pub enum Params {
+    /// Parameters to create topic.
+    #[serde(rename = "wc_createTopic")]
+    CreateTopic(CreateTopic),
+
+    /// Parameters to propose session.
+    #[serde(rename = "wc_proposeSession")]
+    ProposeSession(ProposeSession),
+
+    /// Parameters to approve session.
+    #[serde(rename = "wc_approveSession")]
+    ApproveSession(ApproveSession),
+
     /// Parameters to subscribe.
     #[serde(rename = "irn_subscribe", alias = "iridium_subscribe")]
     Subscribe(Subscribe),
@@ -864,6 +995,9 @@ impl Request {
         }
 
         match &self.params {
+            Params::CreateTopic(params) => params.validate(),
+            Params::ProposeSession(params) => params.validate(),
+            Params::ApproveSession(params) => params.validate(),
             Params::Subscribe(params) => params.validate(),
             Params::SubscribeBlocking(params) => params.validate(),
             Params::Unsubscribe(params) => params.validate(),

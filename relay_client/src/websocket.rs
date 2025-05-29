@@ -7,12 +7,15 @@ use {
     relay_rpc::{
         domain::{MessageId, SubscriptionId, Topic},
         rpc::{
+            ApproveSession,
             BatchFetchMessages,
             BatchReceiveMessages,
             BatchSubscribe,
             BatchSubscribeBlocking,
             BatchUnsubscribe,
+            CreateTopic,
             FetchMessages,
+            ProposeSession,
             Publish,
             Receipt,
             Subscribe,
@@ -36,7 +39,8 @@ pub use {
     tokio_tungstenite::tungstenite::protocol::CloseFrame,
 };
 
-pub type TransportError = tokio_tungstenite::tungstenite::Error;
+pub type RawTransportError = tokio_tungstenite::tungstenite::Error;
+pub type TransportError = Box<RawTransportError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WebsocketClientError {
@@ -149,6 +153,50 @@ impl Client {
         tokio::spawn(connection_event_loop(control_rx, handler));
 
         Self { control_tx }
+    }
+
+    pub fn create_topic(&self, topic: Topic) -> ResponseFuture<CreateTopic> {
+        let (request, response) = create_request(CreateTopic { topic });
+
+        self.request(request);
+
+        response
+    }
+
+    pub fn propose_session(
+        &self,
+        pairing_topic: Topic,
+        session_proposal: impl Into<Arc<str>>,
+        attestation: impl Into<Option<Arc<str>>>,
+    ) -> ResponseFuture<ProposeSession> {
+        let (request, response) = create_request(ProposeSession {
+            pairing_topic,
+            session_proposal: session_proposal.into(),
+            attestation: attestation.into(),
+        });
+
+        self.request(request);
+
+        response
+    }
+
+    pub fn approve_session(
+        &self,
+        pairing_topic: Topic,
+        session_topic: Topic,
+        pairing_response: impl Into<Arc<str>>,
+        session_settlement_request: impl Into<Arc<str>>,
+    ) -> ResponseFuture<ApproveSession> {
+        let (request, response) = create_request(ApproveSession {
+            pairing_topic,
+            session_topic,
+            pairing_response: pairing_response.into(),
+            session_settlement_request: session_settlement_request.into(),
+        });
+
+        self.request(request);
+
+        response
     }
 
     /// Publishes a message over the network on given topic.
