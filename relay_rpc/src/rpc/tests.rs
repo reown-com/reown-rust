@@ -63,6 +63,10 @@ fn propose_session() {
                 .into(),
             session_proposal: "proposal".into(),
             attestation: Some("attestation".into()),
+            analytics: Some(AnalyticsData {
+                correlation_id: Some(42),
+                ..Default::default()
+            }),
         }),
     ));
 
@@ -70,7 +74,7 @@ fn propose_session() {
 
     assert_eq!(
         &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"wc_proposeSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionProposal":"proposal","attestation":"attestation"}}"#
+        r#"{"id":1,"jsonrpc":"2.0","method":"wc_proposeSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionProposal":"proposal","attestation":"attestation","correlationId":42}}"#
     );
 
     let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
@@ -87,8 +91,12 @@ fn approve_session() {
                 .into(),
             session_topic: "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841"
                 .into(),
-            pairing_response: "pairing_response".into(),
+            session_proposal_response: "pairing_response".into(),
             session_settlement_request: "session_settlement_request".into(),
+            analytics: Some(AnalyticsData {
+                correlation_id: Some(42),
+                ..Default::default()
+            }),
         }),
     ));
 
@@ -96,7 +104,7 @@ fn approve_session() {
 
     assert_eq!(
         &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"wc_approveSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841","pairingResponse":"pairing_response","sessionSettlementRequest":"session_settlement_request"}}"#
+        r#"{"id":1,"jsonrpc":"2.0","method":"wc_approveSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841","sessionProposalResponse":"pairing_response","sessionSettlementRequest":"session_settlement_request","correlationId":42}}"#
     );
 
     let deserialized: Payload = serde_json::from_str(&serialized).unwrap();

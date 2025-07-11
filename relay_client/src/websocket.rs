@@ -173,6 +173,7 @@ impl Client {
             pairing_topic,
             session_proposal: session_proposal.into(),
             attestation: attestation.into(),
+            analytics: None,
         });
 
         self.request(request);
@@ -184,14 +185,15 @@ impl Client {
         &self,
         pairing_topic: Topic,
         session_topic: Topic,
-        pairing_response: impl Into<Arc<str>>,
+        session_proposal_response: impl Into<Arc<str>>,
         session_settlement_request: impl Into<Arc<str>>,
     ) -> ResponseFuture<ApproveSession> {
         let (request, response) = create_request(ApproveSession {
             pairing_topic,
             session_topic,
-            pairing_response: pairing_response.into(),
+            session_proposal_response: session_proposal_response.into(),
             session_settlement_request: session_settlement_request.into(),
+            analytics: None,
         });
 
         self.request(request);
