@@ -270,6 +270,23 @@ pub struct ProposeSession {
     pub pairing_topic: Topic,
     pub session_proposal: Arc<str>,
     pub attestation: Option<Arc<str>>,
+
+    #[serde(default, flatten, skip_serializing_if = "is_default")]
+    pub analytics: Option<AnalyticsData>,
+}
+
+impl ProposeSession {
+    pub fn to_session_proposal(&self) -> Publish {
+        Publish {
+            topic: self.pairing_topic.clone(),
+            message: self.session_proposal.clone(),
+            attestation: self.attestation.clone(),
+            prompt: true,
+            tag: 1100,
+            ttl_secs: 300,
+            analytics: self.analytics.clone(),
+        }
+    }
 }
 
 impl ServiceRequest for ProposeSession {
@@ -311,8 +328,39 @@ pub enum ApproveSessionError {
 pub struct ApproveSession {
     pub pairing_topic: Topic,
     pub session_topic: Topic,
-    pub pairing_response: Arc<str>,
+
+    #[serde(alias = "pairing_response")]
+    pub session_proposal_response: Arc<str>,
     pub session_settlement_request: Arc<str>,
+
+    #[serde(default, flatten, skip_serializing_if = "is_default")]
+    pub analytics: Option<AnalyticsData>,
+}
+
+impl ApproveSession {
+    pub fn to_session_proposal_response(&self) -> Publish {
+        Publish {
+            topic: self.pairing_topic.clone(),
+            message: self.session_proposal_response.clone(),
+            attestation: None,
+            prompt: false,
+            tag: 1101,
+            ttl_secs: 300,
+            analytics: self.analytics.clone(),
+        }
+    }
+
+    pub fn to_session_settlement_request(&self) -> Publish {
+        Publish {
+            topic: self.session_topic.clone(),
+            message: self.session_settlement_request.clone(),
+            attestation: None,
+            prompt: false,
+            tag: 1102,
+            ttl_secs: 300,
+            analytics: self.analytics.clone(),
+        }
+    }
 }
 
 impl ServiceRequest for ApproveSession {
@@ -328,7 +376,7 @@ impl ServiceRequest for ApproveSession {
             .decode()
             .map_err(|_| PayloadError::InvalidTopic)?;
 
-        if self.pairing_response.is_empty() || self.session_settlement_request.is_empty() {
+        if self.session_proposal_response.is_empty() || self.session_settlement_request.is_empty() {
             Err(PayloadError::InvalidParams)
         } else {
             Ok(())
@@ -645,13 +693,22 @@ impl ServiceRequest for BatchReceiveMessages {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalyticsData {
+    #[serde(default, skip_serializing_if = "is_default")]
     pub correlation_id: Option<i64>,
+
+    #[serde(default, skip_serializing_if = "is_default")]
     pub chain_id: Option<Arc<str>>,
+
+    #[serde(default, skip_serializing_if = "is_default")]
     pub rpc_methods: Option<Vec<Arc<str>>>,
+
+    #[serde(default, skip_serializing_if = "is_default")]
     pub tx_hashes: Option<Vec<Arc<str>>>,
+
+    #[serde(default, skip_serializing_if = "is_default")]
     pub contract_addresses: Option<Vec<Arc<str>>>,
 }
 
@@ -1014,9 +1071,12 @@ impl Request {
         }
     }
 
-    pub fn strip_analytics(&mut self) {
-        if let Params::Publish(params) = &mut self.params {
-            params.analytics = None;
+    pub fn strip_analytics(&mut self) -> Option<AnalyticsData> {
+        match &mut self.params {
+            Params::Publish(params) => params.analytics.take(),
+            Params::ProposeSession(params) => params.analytics.take(),
+            Params::ApproveSession(params) => params.analytics.take(),
+            _ => None,
         }
     }
 }
