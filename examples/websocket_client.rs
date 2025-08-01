@@ -38,7 +38,7 @@ impl ConnectionHandler for Handler {
         println!("[{}] connection open", self.name);
     }
 
-    fn disconnected(&mut self, frame: Option<CloseFrame<'static>>) {
+    fn disconnected(&mut self, frame: Option<CloseFrame>) {
         println!("[{}] connection closed: frame={frame:?}", self.name);
     }
 
