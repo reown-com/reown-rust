@@ -57,6 +57,7 @@ where
 
         let message = Message::Text(
             serde_json::to_string(&Payload::Response(response))
+                .map(Into::into)
                 .map_err(ClientError::Serialization)?,
         );
 

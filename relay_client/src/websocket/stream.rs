@@ -68,7 +68,7 @@ pub enum StreamEvent {
     /// The websocket connection was closed.
     ///
     /// This is the last event that can be produced by the stream.
-    ConnectionClosed(Option<CloseFrame<'static>>),
+    ConnectionClosed(Option<CloseFrame>),
 }
 
 /// Lower-level [`FusedStream`] interface for the client connection.
@@ -84,7 +84,7 @@ pub struct ClientStream {
     outbound_rx: UnboundedReceiver<Message>,
     requests: HashMap<MessageId, oneshot::Sender<Result<serde_json::Value, ClientError>>>,
     id_generator: MessageIdGenerator,
-    close_frame: Option<CloseFrame<'static>>,
+    close_frame: Option<CloseFrame>,
 }
 
 impl ClientStream {
@@ -119,7 +119,7 @@ impl ClientStream {
 
                 Entry::Vacant(entry) => {
                     entry.insert(tx);
-                    self.outbound_tx.send(Message::Text(data)).ok();
+                    self.outbound_tx.send(Message::Text(data.into())).ok();
                 }
             },
 
@@ -141,7 +141,7 @@ impl ClientStream {
     }
 
     /// Closes the connection.
-    pub async fn close(&mut self, frame: Option<CloseFrame<'static>>) -> Result<(), ClientError> {
+    pub async fn close(&mut self, frame: Option<CloseFrame>) -> Result<(), ClientError> {
         self.close_frame = frame.clone();
         self.socket
             .close(frame)

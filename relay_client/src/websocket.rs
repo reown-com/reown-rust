@@ -63,7 +63,7 @@ pub enum WebsocketClientError {
 /// Wrapper around the websocket [`CloseFrame`] providing info about the
 /// connection closing reason.
 #[derive(Debug, Clone)]
-pub struct CloseReason(pub Option<CloseFrame<'static>>);
+pub struct CloseReason(pub Option<CloseFrame>);
 
 impl std::fmt::Display for CloseReason {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -117,7 +117,7 @@ pub trait ConnectionHandler: Send + 'static {
     fn connected(&mut self) {}
 
     /// Called when the Relay connection is closed.
-    fn disconnected(&mut self, _frame: Option<CloseFrame<'static>>) {}
+    fn disconnected(&mut self, _frame: Option<CloseFrame>) {}
 
     /// Called when a message is received from the Relay.
     fn message_received(&mut self, message: PublishedMessage);
