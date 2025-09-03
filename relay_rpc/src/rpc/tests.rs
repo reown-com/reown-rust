@@ -11,13 +11,13 @@ fn request() {
             ttl_secs: 12,
             tag: 0,
             prompt: false,
-            analytics: Some(AnalyticsData {
+            analytics: Some(AnalyticsWrapper::new(AnalyticsData {
                 correlation_id: Some(123456789),
                 chain_id: Some("chain_id".into()),
                 rpc_methods: Some(vec!["rpc_method".into()]),
                 tx_hashes: Some(vec!["tx_hash".into()]),
                 contract_addresses: Some(vec!["contract_address".into()]),
-            }),
+            })),
         }),
     ));
 
@@ -63,10 +63,10 @@ fn propose_session() {
                 .into(),
             session_proposal: "proposal".into(),
             attestation: Some("attestation".into()),
-            analytics: Some(AnalyticsData {
+            analytics: Some(AnalyticsWrapper::new(AnalyticsData {
                 correlation_id: Some(42),
                 ..Default::default()
-            }),
+            })),
         }),
     ));
 
@@ -93,10 +93,10 @@ fn approve_session() {
                 .into(),
             session_proposal_response: "pairing_response".into(),
             session_settlement_request: "session_settlement_request".into(),
-            analytics: Some(AnalyticsData {
+            analytics: Some(AnalyticsWrapper::new(AnalyticsData {
                 correlation_id: Some(42),
                 ..Default::default()
-            }),
+            })),
         }),
     ));
 
@@ -788,4 +788,78 @@ fn error_tags() {
     assert_eq!(InternalError::StorageError.tag(), "StorageError");
     assert_eq!(InternalError::Serialization.tag(), "Serialization");
     assert_eq!(InternalError::Unknown.tag(), "Unknown");
+}
+
+#[test]
+fn broken_analytics() {
+    let serialized_nested = r#"
+        {
+            "id": "1756836372126227968",
+            "jsonrpc": "2.0",
+            "method": "irn_publish",
+            "params": {
+                "topic": "2bd669907a16dd986a3a87ddb1df8750875c4e71150915e5313d90fbba0de0a1",
+                "message": "AJgQKu+IqhjKt0OKB3oPHYiHZvBUaDyeip9zUhANuik5jejGTJodHghiEHjAeVRitj8DKoRbVEdcHBs/SgUBLEDf+WdtVnE+YJjfw6zjkb82rrntknen6gPDupUaFKeUhOAJpvZGLwBcX6EKKMs6zlCdm+kSgNvqDwy/9R+09vEUD0KZYy9E2M8wbQdQnV5yM+w=",
+                "ttl": 300,
+                "prompt": false,
+                "tag": 1109,
+                "tvf": {
+                    "correlationId": 1756836363734797,
+                    "rpcMethods": [
+                        "eth_sendTransaction"
+                    ],
+                    "chainId": "eip155:8453",
+                    "txHashes": [
+                        "0xb78adbacb974a952c4fa8a27b20c1a005cb1da32031872a7688fb9a9e98acf37"
+                    ],
+                    "contractAddresses": [
+                        "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+                    ]
+                }
+            }
+        }
+        "#;
+
+    let serialized_flat = r#"
+        {
+            "id": "1756836372126227968",
+            "jsonrpc": "2.0",
+            "method": "irn_publish",
+            "params": {
+                "topic": "2bd669907a16dd986a3a87ddb1df8750875c4e71150915e5313d90fbba0de0a1",
+                "message": "AJgQKu+IqhjKt0OKB3oPHYiHZvBUaDyeip9zUhANuik5jejGTJodHghiEHjAeVRitj8DKoRbVEdcHBs/SgUBLEDf+WdtVnE+YJjfw6zjkb82rrntknen6gPDupUaFKeUhOAJpvZGLwBcX6EKKMs6zlCdm+kSgNvqDwy/9R+09vEUD0KZYy9E2M8wbQdQnV5yM+w=",
+                "ttl": 300,
+                "prompt": false,
+                "tag": 1109,
+                "correlationId": 1756836363734797,
+                "rpcMethods": [
+                    "eth_sendTransaction"
+                ],
+                "chainId": "eip155:8453",
+                "txHashes": [
+                    "0xb78adbacb974a952c4fa8a27b20c1a005cb1da32031872a7688fb9a9e98acf37"
+                ],
+                "contractAddresses": [
+                    "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+                ]
+            }
+        }
+        "#;
+
+    let mut deserialized_nested: Payload = serde_json::from_str(serialized_nested).unwrap();
+    let mut deserialized_flat: Payload = serde_json::from_str(serialized_flat).unwrap();
+
+    let analytics_nested = deserialized_nested.strip_analytics().unwrap();
+    let analytics_flat = deserialized_flat.strip_analytics().unwrap();
+
+    assert_eq!(analytics_nested, analytics_flat);
+    assert_eq!(analytics_nested, AnalyticsData {
+        correlation_id: Some(1756836363734797),
+        chain_id: Some("eip155:8453".into()),
+        rpc_methods: Some(vec!["eth_sendTransaction".into()]),
+        tx_hashes: Some(vec![
+            "0xb78adbacb974a952c4fa8a27b20c1a005cb1da32031872a7688fb9a9e98acf37".into()
+        ]),
+        contract_addresses: Some(vec!["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913".into()]),
+    });
 }
