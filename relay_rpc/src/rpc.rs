@@ -89,9 +89,11 @@ impl Payload {
         }
     }
 
-    pub fn strip_analytics(&mut self) {
+    pub fn strip_analytics(&mut self) -> Option<AnalyticsData> {
         if let Self::Request(req) = self {
-            req.strip_analytics();
+            req.strip_analytics()
+        } else {
+            None
         }
     }
 }
@@ -272,7 +274,7 @@ pub struct ProposeSession {
     pub attestation: Option<Arc<str>>,
 
     #[serde(default, flatten, skip_serializing_if = "is_default")]
-    pub analytics: Option<AnalyticsData>,
+    pub analytics: Option<AnalyticsWrapper>,
 }
 
 impl ProposeSession {
@@ -334,7 +336,7 @@ pub struct ApproveSession {
     pub session_settlement_request: Arc<str>,
 
     #[serde(default, flatten, skip_serializing_if = "is_default")]
-    pub analytics: Option<AnalyticsData>,
+    pub analytics: Option<AnalyticsWrapper>,
 }
 
 impl ApproveSession {
@@ -712,6 +714,49 @@ pub struct AnalyticsData {
     pub contract_addresses: Option<Vec<Arc<str>>>,
 }
 
+/// Wrapper for [`AnalyticsData`] to mitigate a problem with inconsistent
+/// serialization across SDKs.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AnalyticsWrapper {
+    Nested {
+        tvf: AnalyticsData,
+    },
+
+    Flat {
+        #[serde(flatten)]
+        tvf: AnalyticsData,
+    },
+}
+
+impl AnalyticsWrapper {
+    pub fn new(tvf: AnalyticsData) -> Self {
+        Self::Flat { tvf }
+    }
+
+    pub fn data(&self) -> &AnalyticsData {
+        match self {
+            Self::Nested { tvf } => tvf,
+            Self::Flat { tvf } => tvf,
+        }
+    }
+}
+
+impl From<AnalyticsWrapper> for AnalyticsData {
+    fn from(value: AnalyticsWrapper) -> Self {
+        match value {
+            AnalyticsWrapper::Nested { tvf } => tvf,
+            AnalyticsWrapper::Flat { tvf } => tvf,
+        }
+    }
+}
+
+impl From<AnalyticsData> for AnalyticsWrapper {
+    fn from(value: AnalyticsData) -> Self {
+        AnalyticsWrapper::new(value)
+    }
+}
+
 /// Data structure representing publish request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Publish {
@@ -739,7 +784,7 @@ pub struct Publish {
     pub prompt: bool,
 
     #[serde(default, flatten, skip_serializing_if = "is_default")]
-    pub analytics: Option<AnalyticsData>,
+    pub analytics: Option<AnalyticsWrapper>,
 }
 
 impl Publish {
@@ -1072,11 +1117,13 @@ impl Request {
     }
 
     pub fn strip_analytics(&mut self) -> Option<AnalyticsData> {
-        match &mut self.params {
+        let wrapper = match &mut self.params {
             Params::Publish(params) => params.analytics.take(),
             Params::ProposeSession(params) => params.analytics.take(),
             Params::ApproveSession(params) => params.analytics.take(),
             _ => None,
-        }
+        };
+
+        wrapper.map(Into::into)
     }
 }
