@@ -324,16 +324,40 @@ pub enum ApproveSessionError {
     PublishFailed,
 }
 
+/// Approved session properties.
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionProperties {
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub approved_chains: Option<Vec<Arc<str>>>,
+
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub approved_methods: Option<Vec<Arc<str>>>,
+
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub approved_accounts: Option<Vec<Arc<str>>>,
+
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub approved_events: Option<Vec<Arc<str>>>,
+
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub session_properties: Option<Vec<Arc<str>>>,
+
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub scoped_properties: Option<Vec<Arc<str>>>,
+}
+
 /// Approve session request parameters.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ApproveSession {
     pub pairing_topic: Topic,
     pub session_topic: Topic,
-
-    #[serde(alias = "pairing_response")]
     pub session_proposal_response: Arc<str>,
     pub session_settlement_request: Arc<str>,
+
+    #[serde(flatten, skip_serializing_if = "is_default")]
+    pub properties: Arc<SessionProperties>,
 
     #[serde(default, flatten, skip_serializing_if = "is_default")]
     pub analytics: Option<AnalyticsWrapper>,
@@ -362,6 +386,10 @@ impl ApproveSession {
             ttl_secs: 300,
             analytics: self.analytics.clone(),
         }
+    }
+
+    pub fn properties(&self) -> &SessionProperties {
+        &self.properties
     }
 }
 

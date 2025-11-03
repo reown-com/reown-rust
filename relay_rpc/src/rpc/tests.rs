@@ -93,6 +93,14 @@ fn approve_session() {
                 .into(),
             session_proposal_response: "pairing_response".into(),
             session_settlement_request: "session_settlement_request".into(),
+            properties: Arc::new(SessionProperties {
+                approved_chains: Some(vec!["chain1".into(), "chain2".into()]),
+                approved_methods: Some(vec!["method1".into(), "method2".into()]),
+                approved_accounts: Some(vec!["account1".into(), "account2".into()]),
+                approved_events: Some(vec!["event1".into(), "event2".into()]),
+                session_properties: Some(vec!["sess_prop1".into(), "sess_prop2".into()]),
+                scoped_properties: Some(vec!["scoped_prop1".into(), "scoped_prop2".into()]),
+            }),
             analytics: Some(AnalyticsWrapper::new(AnalyticsData {
                 correlation_id: Some(42),
                 ..Default::default()
@@ -104,7 +112,7 @@ fn approve_session() {
 
     assert_eq!(
         &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"wc_approveSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841","sessionProposalResponse":"pairing_response","sessionSettlementRequest":"session_settlement_request","correlationId":42}}"#
+        r#"{"id":1,"jsonrpc":"2.0","method":"wc_approveSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841","sessionProposalResponse":"pairing_response","sessionSettlementRequest":"session_settlement_request","approvedChains":["chain1","chain2"],"approvedMethods":["method1","method2"],"approvedAccounts":["account1","account2"],"approvedEvents":["event1","event2"],"sessionProperties":["sess_prop1","sess_prop2"],"scopedProperties":["scoped_prop1","scoped_prop2"],"correlationId":42}}"#
     );
 
     let deserialized: Payload = serde_json::from_str(&serialized).unwrap();

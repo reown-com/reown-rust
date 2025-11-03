@@ -109,12 +109,13 @@ impl Client {
         pairing_topic: Topic,
         session_proposal: impl Into<Arc<str>>,
         attestation: impl Into<Option<Arc<str>>>,
+        analytics: Option<rpc::AnalyticsData>,
     ) -> Response<rpc::ProposeSession> {
         self.request(rpc::ProposeSession {
             pairing_topic,
             session_proposal: session_proposal.into(),
             attestation: attestation.into(),
-            analytics: None,
+            analytics: analytics.map(Into::into),
         })
         .await
     }
@@ -125,13 +126,16 @@ impl Client {
         session_topic: Topic,
         session_proposal_response: impl Into<Arc<str>>,
         session_settlement_request: impl Into<Arc<str>>,
+        properties: rpc::SessionProperties,
+        analytics: Option<rpc::AnalyticsData>,
     ) -> Response<rpc::ApproveSession> {
         self.request(rpc::ApproveSession {
             pairing_topic,
             session_topic,
             session_proposal_response: session_proposal_response.into(),
             session_settlement_request: session_settlement_request.into(),
-            analytics: None,
+            properties: Arc::new(properties),
+            analytics: analytics.map(Into::into),
         })
         .await
     }
