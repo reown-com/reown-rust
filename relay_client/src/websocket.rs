@@ -7,6 +7,7 @@ use {
     relay_rpc::{
         domain::{MessageId, SubscriptionId, Topic},
         rpc::{
+            AnalyticsData,
             ApproveSession,
             BatchFetchMessages,
             BatchReceiveMessages,
@@ -18,6 +19,7 @@ use {
             ProposeSession,
             Publish,
             Receipt,
+            SessionProperties,
             Subscribe,
             SubscribeBlocking,
             Subscription,
@@ -168,12 +170,13 @@ impl Client {
         pairing_topic: Topic,
         session_proposal: impl Into<Arc<str>>,
         attestation: impl Into<Option<Arc<str>>>,
+        analytics: Option<AnalyticsData>,
     ) -> ResponseFuture<ProposeSession> {
         let (request, response) = create_request(ProposeSession {
             pairing_topic,
             session_proposal: session_proposal.into(),
             attestation: attestation.into(),
-            analytics: None,
+            analytics: analytics.map(Into::into),
         });
 
         self.request(request);
@@ -187,13 +190,16 @@ impl Client {
         session_topic: Topic,
         session_proposal_response: impl Into<Arc<str>>,
         session_settlement_request: impl Into<Arc<str>>,
+        properties: SessionProperties,
+        analytics: Option<AnalyticsData>,
     ) -> ResponseFuture<ApproveSession> {
         let (request, response) = create_request(ApproveSession {
             pairing_topic,
             session_topic,
             session_proposal_response: session_proposal_response.into(),
             session_settlement_request: session_settlement_request.into(),
-            analytics: None,
+            properties: Arc::new(properties),
+            analytics: analytics.map(Into::into),
         });
 
         self.request(request);

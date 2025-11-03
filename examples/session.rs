@@ -96,6 +96,7 @@ async fn main() -> anyhow::Result<()> {
             pairing_topic.clone(),
             "wc_sessionPropose_req",
             Some("attestation".into()),
+            None,
         )
         .await?;
     println!("[client1] proposed session: pairing_topic={pairing_topic}");
@@ -116,6 +117,8 @@ async fn main() -> anyhow::Result<()> {
             session_topic.clone(),
             "wc_sessionPropose_res",
             "wc_sessionSettle_req",
+            Default::default(),
+            None,
         )
         .await?;
     println!(
