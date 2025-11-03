@@ -2,7 +2,10 @@
 //! clients. This also includes communication over HTTP between relays.
 
 use {
-    crate::domain::{DidKey, MessageId, SubscriptionId, Topic},
+    crate::{
+        domain::{DidKey, MessageId, SubscriptionId, Topic},
+        serde_helpers::json_value,
+    },
     serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::{fmt::Debug, sync::Arc},
 };
@@ -340,11 +343,19 @@ pub struct SessionProperties {
     #[serde(default, skip_serializing_if = "is_default")]
     pub approved_events: Option<Vec<Arc<str>>>,
 
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub session_properties: Option<Vec<Arc<str>>>,
+    #[serde(
+        default,
+        skip_serializing_if = "is_default",
+        deserialize_with = "json_value::deserialize"
+    )]
+    pub session_properties: Option<Arc<str>>,
 
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub scoped_properties: Option<Vec<Arc<str>>>,
+    #[serde(
+        default,
+        skip_serializing_if = "is_default",
+        deserialize_with = "json_value::deserialize"
+    )]
+    pub scoped_properties: Option<Arc<str>>,
 }
 
 /// Approve session request parameters.

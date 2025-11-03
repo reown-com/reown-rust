@@ -84,6 +84,7 @@ fn propose_session() {
 
 #[test]
 fn approve_session() {
+    // Filled properties.
     let payload: Payload = Payload::Request(Request::new(
         1.into(),
         Params::ApproveSession(ApproveSession {
@@ -98,8 +99,8 @@ fn approve_session() {
                 approved_methods: Some(vec!["method1".into(), "method2".into()]),
                 approved_accounts: Some(vec!["account1".into(), "account2".into()]),
                 approved_events: Some(vec!["event1".into(), "event2".into()]),
-                session_properties: Some(vec!["sess_prop1".into(), "sess_prop2".into()]),
-                scoped_properties: Some(vec!["scoped_prop1".into(), "scoped_prop2".into()]),
+                session_properties: Some("session_properties".into()),
+                scoped_properties: Some("scoped_properties".into()),
             }),
             analytics: Some(AnalyticsWrapper::new(AnalyticsData {
                 correlation_id: Some(42),
@@ -112,13 +113,10 @@ fn approve_session() {
 
     assert_eq!(
         &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"wc_approveSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841","sessionProposalResponse":"pairing_response","sessionSettlementRequest":"session_settlement_request","approvedChains":["chain1","chain2"],"approvedMethods":["method1","method2"],"approvedAccounts":["account1","account2"],"approvedEvents":["event1","event2"],"sessionProperties":["sess_prop1","sess_prop2"],"scopedProperties":["scoped_prop1","scoped_prop2"],"correlationId":42}}"#
+        r#"{"id":1,"jsonrpc":"2.0","method":"wc_approveSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841","sessionProposalResponse":"pairing_response","sessionSettlementRequest":"session_settlement_request","approvedChains":["chain1","chain2"],"approvedMethods":["method1","method2"],"approvedAccounts":["account1","account2"],"approvedEvents":["event1","event2"],"sessionProperties":"session_properties","scopedProperties":"scoped_properties","correlationId":42}}"#
     );
 
-    let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
-
-    assert_eq!(&payload, &deserialized);
-
+    // Empty properties.
     let serialized = r#"{"id":1,"jsonrpc":"2.0","method":"wc_approveSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841","sessionProposalResponse":"pairing_response","sessionSettlementRequest":"session_settlement_request"}}"#;
 
     let deserialized: Payload = serde_json::from_str(serialized).unwrap();
@@ -138,7 +136,28 @@ fn approve_session() {
                 analytics: Some(AnalyticsData::default().into()),
             }),
         ))
-    )
+    );
+
+    // Arbitrary data in `sessionProperties` and `scopedProperties`.
+    let serialized = r#"{"id":1,"jsonrpc":"2.0","method":"wc_approveSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841","sessionProposalResponse":"pairing_response","sessionSettlementRequest":"session_settlement_request","sessionProperties":{"key":"value"},"scopedProperties":["prop1","prop2"]}}"#;
+
+    let deserialized: Payload = serde_json::from_str(serialized).unwrap();
+    let Payload::Request(Request {
+        params: Params::ApproveSession(ApproveSession { properties, .. }),
+        ..
+    }) = deserialized
+    else {
+        panic!();
+    };
+
+    assert_eq!(
+        properties.session_properties,
+        Some(r#"{"key":"value"}"#.into())
+    );
+    assert_eq!(
+        properties.scoped_properties,
+        Some(r#"["prop1","prop2"]"#.into())
+    );
 }
 
 #[test]
