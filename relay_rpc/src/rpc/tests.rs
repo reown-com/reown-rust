@@ -117,7 +117,28 @@ fn approve_session() {
 
     let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
 
-    assert_eq!(&payload, &deserialized)
+    assert_eq!(&payload, &deserialized);
+
+    let serialized = r#"{"id":1,"jsonrpc":"2.0","method":"wc_approveSession","params":{"pairingTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","sessionTopic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841","sessionProposalResponse":"pairing_response","sessionSettlementRequest":"session_settlement_request"}}"#;
+
+    let deserialized: Payload = serde_json::from_str(serialized).unwrap();
+
+    assert_eq!(
+        deserialized,
+        Payload::Request(Request::new(
+            1.into(),
+            Params::ApproveSession(ApproveSession {
+                pairing_topic: "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840"
+                    .into(),
+                session_topic: "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9841"
+                    .into(),
+                session_proposal_response: "pairing_response".into(),
+                session_settlement_request: "session_settlement_request".into(),
+                properties: Arc::new(Default::default()),
+                analytics: Some(AnalyticsData::default().into()),
+            }),
+        ))
+    )
 }
 
 #[test]
