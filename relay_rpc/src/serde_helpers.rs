@@ -22,6 +22,30 @@ pub mod client_id_as_did_key {
     }
 }
 
+pub mod json_value {
+    use {
+        serde::{Deserialize, Deserializer},
+        std::sync::Arc,
+    };
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Arc<str>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        use {serde::de::Error, serde_json::Value};
+
+        let value = Value::deserialize(deserializer)?;
+
+        if let Value::Null = &value {
+            Ok(None)
+        } else {
+            serde_json::to_string(&value)
+                .map(|result| Some(result.into()))
+                .map_err(D::Error::custom)
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use {
