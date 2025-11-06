@@ -6,6 +6,8 @@ use {
         domain::{DidKey, MessageId, SubscriptionId, Topic},
         serde_helpers::json_value,
     },
+    derive_more::{Deref, DerefMut},
+    enum_as_inner::EnumAsInner,
     serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::{fmt::Debug, sync::Arc},
 };
@@ -65,7 +67,7 @@ pub trait ServiceRequest: Serializable {
 }
 
 /// Enum representing a JSON RPC payload.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, EnumAsInner)]
 #[serde(untagged)]
 pub enum Payload {
     /// An inbound request.
@@ -1024,7 +1026,7 @@ pub struct SubscriptionData {
 }
 
 /// Enum representing parameters of all possible RPC requests.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, EnumAsInner)]
 #[serde(tag = "method", content = "params")]
 pub enum Params {
     /// Parameters to create topic.
@@ -1102,7 +1104,7 @@ pub enum Params {
 }
 
 /// Data structure representing a JSON RPC request.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Deref, DerefMut)]
 pub struct Request {
     /// ID this message corresponds to.
     pub id: MessageId,
@@ -1112,6 +1114,8 @@ pub struct Request {
 
     /// The parameters required to fulfill this request.
     #[serde(flatten)]
+    #[deref]
+    #[deref_mut]
     pub params: Params,
 }
 
