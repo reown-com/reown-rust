@@ -48,6 +48,9 @@ pub enum AuthError {
 
     #[error("Country blocked")]
     CountryBlocked,
+
+    #[error("Access denied")]
+    AccessDenied,
 }
 
 /// Request payload validation problems.
