@@ -14,7 +14,6 @@ use {
             BatchSubscribe,
             BatchSubscribeBlocking,
             BatchUnsubscribe,
-            CreateTopic,
             FetchMessages,
             ProposeSession,
             Publish,
@@ -155,14 +154,6 @@ impl Client {
         tokio::spawn(connection_event_loop(control_rx, handler));
 
         Self { control_tx }
-    }
-
-    pub fn create_topic(&self, topic: Topic) -> ResponseFuture<CreateTopic> {
-        let (request, response) = create_request(CreateTopic { topic });
-
-        self.request(request);
-
-        response
     }
 
     pub fn propose_session(

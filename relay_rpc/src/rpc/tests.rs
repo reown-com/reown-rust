@@ -34,27 +34,6 @@ fn request() {
 }
 
 #[test]
-fn create_topic() {
-    let payload: Payload = Payload::Request(Request::new(
-        1.into(),
-        Params::CreateTopic(CreateTopic {
-            topic: "c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840".into(),
-        }),
-    ));
-
-    let serialized = serde_json::to_string(&payload).unwrap();
-
-    assert_eq!(
-        &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"wc_createTopic","params":{"topic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840"}}"#
-    );
-
-    let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
-
-    assert_eq!(&payload, &deserialized)
-}
-
-#[test]
 fn propose_session() {
     let payload: Payload = Payload::Request(Request::new(
         1.into(),
@@ -267,45 +246,6 @@ fn batch_receive() {
     assert_eq!(
         &serialized,
         r#"{"id":1,"jsonrpc":"2.0","method":"irn_batchReceive","params":{"receipts":[{"topic":"c4163cf65859106b3f5435fc296e7765411178ed452d1c30337a6230138c9840","message_id":123}]}}"#
-    );
-
-    let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
-
-    assert_eq!(&payload, &deserialized)
-}
-
-#[test]
-fn watch_register() {
-    let params: WatchRegister = WatchRegister {
-        register_auth: "jwt".to_owned(),
-    };
-    let payload: Payload = Payload::Request(Request::new(1.into(), Params::WatchRegister(params)));
-
-    let serialized = serde_json::to_string(&payload).unwrap();
-
-    assert_eq!(
-        &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"irn_watchRegister","params":{"registerAuth":"jwt"}}"#
-    );
-
-    let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
-
-    assert_eq!(&payload, &deserialized)
-}
-
-#[test]
-fn watch_unregister() {
-    let params: WatchUnregister = WatchUnregister {
-        unregister_auth: "jwt".to_owned(),
-    };
-    let payload: Payload =
-        Payload::Request(Request::new(1.into(), Params::WatchUnregister(params)));
-
-    let serialized = serde_json::to_string(&payload).unwrap();
-
-    assert_eq!(
-        &serialized,
-        r#"{"id":1,"jsonrpc":"2.0","method":"irn_watchUnregister","params":{"unregisterAuth":"jwt"}}"#
     );
 
     let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
@@ -795,12 +735,6 @@ fn error_tags() {
     );
 
     assert_eq!(GenericError::Unknown.tag(), "Unknown");
-
-    assert_eq!(WatchError::InvalidTtl.tag(), "InvalidTtl");
-    assert_eq!(WatchError::InvalidServiceUrl.tag(), "InvalidServiceUrl");
-    assert_eq!(WatchError::InvalidWebhookUrl.tag(), "InvalidWebhookUrl");
-    assert_eq!(WatchError::InvalidAction.tag(), "InvalidAction");
-    assert_eq!(WatchError::InvalidJwt.tag(), "InvalidJwt");
 
     assert_eq!(AuthError::ProjectNotFound.tag(), "ProjectNotFound");
     assert_eq!(

@@ -3,7 +3,7 @@
 
 use {
     crate::{
-        domain::{DidKey, MessageId, SubscriptionId, Topic},
+        domain::{MessageId, SubscriptionId, Topic},
         serde_helpers::json_value,
     },
     derive_more::{Deref, DerefMut},
@@ -11,13 +11,12 @@ use {
     serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::{fmt::Debug, sync::Arc},
 };
-pub use {error::*, watch::*};
+pub use error::*;
 
 pub mod error;
 pub mod msg_id;
 #[cfg(test)]
 mod tests;
-pub mod watch;
 
 /// Version of the WalletConnect protocol that we're implementing.
 pub const JSON_RPC_VERSION_STR: &str = "2.0";
@@ -226,36 +225,6 @@ pub struct ErrorData {
 pub enum SubscriptionError {
     #[error("Subscriber limit exceeded")]
     SubscriberLimitExceeded,
-}
-
-#[derive(Debug, thiserror::Error, strum::EnumString, strum::IntoStaticStr, PartialEq, Eq)]
-pub enum CreateTopicError {
-    #[error("Unknown error")]
-    Unknown,
-}
-
-/// Create topic request parameters. Registers the topic with the relay and
-/// subscribes the client.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct CreateTopic {
-    pub topic: Topic,
-}
-
-impl ServiceRequest for CreateTopic {
-    type Error = CreateTopicError;
-    type Response = bool;
-
-    fn validate(&self) -> Result<(), PayloadError> {
-        self.topic
-            .decode()
-            .map_err(|_| PayloadError::InvalidTopic)?;
-
-        Ok(())
-    }
-
-    fn into_params(self) -> Params {
-        Params::CreateTopic(self)
-    }
 }
 
 #[derive(Debug, thiserror::Error, strum::EnumString, strum::IntoStaticStr, PartialEq, Eq)]
@@ -904,73 +873,6 @@ pub enum GenericError {
     Unknown,
 }
 
-#[derive(Debug, thiserror::Error, strum::EnumString, strum::IntoStaticStr, PartialEq, Eq)]
-pub enum WatchError {
-    #[error("Invalid TTL")]
-    InvalidTtl,
-
-    #[error("Service URL is invalid or too long")]
-    InvalidServiceUrl,
-
-    #[error("Webhook URL is invalid or too long")]
-    InvalidWebhookUrl,
-
-    #[error("Invalid action")]
-    InvalidAction,
-
-    #[error("Invalid JWT")]
-    InvalidJwt,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WatchRegisterResponse {
-    /// The Relay's public key (did:key).
-    pub relay_id: DidKey,
-}
-
-/// Data structure representing watch registration request params.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WatchRegister {
-    /// JWT with [`watch::WatchRegisterClaims`] payload.
-    pub register_auth: String,
-}
-
-impl ServiceRequest for WatchRegister {
-    type Error = WatchError;
-    type Response = WatchRegisterResponse;
-
-    fn validate(&self) -> Result<(), PayloadError> {
-        Ok(())
-    }
-
-    fn into_params(self) -> Params {
-        Params::WatchRegister(self)
-    }
-}
-
-/// Data structure representing watch unregistration request params.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WatchUnregister {
-    /// JWT with [`watch::WatchUnregisterClaims`] payload.
-    pub unregister_auth: String,
-}
-
-impl ServiceRequest for WatchUnregister {
-    type Error = WatchError;
-    type Response = bool;
-
-    fn validate(&self) -> Result<(), PayloadError> {
-        Ok(())
-    }
-
-    fn into_params(self) -> Params {
-        Params::WatchUnregister(self)
-    }
-}
-
 /// Data structure representing subscription request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Subscription {
@@ -1029,10 +931,6 @@ pub struct SubscriptionData {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, EnumAsInner)]
 #[serde(tag = "method", content = "params")]
 pub enum Params {
-    /// Parameters to create topic.
-    #[serde(rename = "wc_createTopic")]
-    CreateTopic(CreateTopic),
-
     /// Parameters to propose session.
     #[serde(rename = "wc_proposeSession")]
     ProposeSession(ProposeSession),
@@ -1087,14 +985,6 @@ pub enum Params {
     #[serde(rename = "irn_batchReceive", alias = "iridium_batchReceive")]
     BatchReceiveMessages(BatchReceiveMessages),
 
-    /// Parameters to watch register.
-    #[serde(rename = "irn_watchRegister", alias = "iridium_watchRegister")]
-    WatchRegister(WatchRegister),
-
-    /// Parameters to watch unregister.
-    #[serde(rename = "irn_watchUnregister", alias = "iridium_watchUnregister")]
-    WatchUnregister(WatchUnregister),
-
     /// Parameters for a subscription. The messages for any given topic sent to
     /// clients are wrapped into this format. A `publish` message to a topic
     /// results in a `subscription` message to each client subscribed to the
@@ -1140,7 +1030,6 @@ impl Request {
         }
 
         match &self.params {
-            Params::CreateTopic(params) => params.validate(),
             Params::ProposeSession(params) => params.validate(),
             Params::ApproveSession(params) => params.validate(),
             Params::Subscribe(params) => params.validate(),
@@ -1153,8 +1042,6 @@ impl Request {
             Params::BatchFetchMessages(params) => params.validate(),
             Params::Publish(params) => params.validate(),
             Params::BatchReceiveMessages(params) => params.validate(),
-            Params::WatchRegister(params) => params.validate(),
-            Params::WatchUnregister(params) => params.validate(),
             Params::Subscription(params) => params.validate(),
         }
     }
