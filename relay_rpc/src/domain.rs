@@ -8,7 +8,7 @@ use {
         },
         new_type,
     },
-    derive_more::{AsMut, AsRef},
+    derive_more::{AsMut, AsRef, From},
     ed25519_dalek::VerifyingKey,
     serde::{Deserialize, Serialize},
     serde_aux::prelude::deserialize_number_from_string,
@@ -31,6 +31,22 @@ pub enum ClientIdDecodingError {
 
     #[error("Invalid issuer pubkey length")]
     Length,
+}
+
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("Failed to decode Topic: {0}")]
+pub struct TopicDecodingError(TopicDecodingErrorInner);
+
+#[derive(Debug, Clone, thiserror::Error)]
+enum TopicDecodingErrorInner {
+    #[error("Invalid hex: {0}")]
+    InvalidHex(#[from] DecodingError),
+
+    #[error("Unknown kind: {0}")]
+    UnknownKind(u8),
+
+    #[error("Unknown region: {0}")]
+    UnknownRegion(u8),
 }
 
 #[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
@@ -202,6 +218,16 @@ new_type!(
     Topic: Arc<str>
 );
 
+impl Topic {
+    pub fn decode(&self) -> Result<DecodedTopic, TopicDecodingError> {
+        self.0.parse()
+    }
+
+    pub fn generate() -> Self {
+        Self::from(DecodedTopic::generate())
+    }
+}
+
 new_type!(
     #[doc = "Represents the subscription ID type."]
     #[as_ref(forward)]
@@ -267,32 +293,13 @@ macro_rules! impl_byte_array_newtype {
             type Err = DecodingError;
 
             fn from_str(val: &str) -> Result<Self, Self::Err> {
-                let enc_len = val.len();
-                if enc_len == 0 {
-                    return Err(DecodingError::Length);
-                }
-
-                let dec_len = data_encoding::HEXLOWER_PERMISSIVE
-                    .decode_len(enc_len)
-                    .map_err(|_| DecodingError::Length)?;
-
-                if dec_len != $ByteLength {
-                    return Err(DecodingError::Length);
-                }
-
-                let mut data = Self::default();
-
-                data_encoding::HEXLOWER_PERMISSIVE
-                    .decode_mut(val.as_bytes(), &mut data.0)
-                    .map_err(|_| DecodingError::Encoding)?;
-
-                Ok(data)
+                hex_decode_array(val).map(Self)
             }
         }
 
         impl std::fmt::Display for $NewType {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.write_str(&data_encoding::HEXLOWER_PERMISSIVE.encode(&self.0))
+                f.write_str(&hex_encode(&self.0))
             }
         }
 
@@ -324,7 +331,192 @@ macro_rules! impl_byte_array_newtype {
     };
 }
 
-impl_byte_array_newtype!(DecodedTopic, Topic, 32);
+fn hex_encode(bytes: &[u8]) -> String {
+    data_encoding::HEXLOWER_PERMISSIVE.encode(bytes)
+}
+
+fn hex_decode_array<const N: usize>(val: &str) -> Result<[u8; N], DecodingError>
+where
+    [u8; N]: Default,
+{
+    let enc_len = val.len();
+    if enc_len == 0 {
+        return Err(DecodingError::Length);
+    }
+
+    let dec_len = data_encoding::HEXLOWER_PERMISSIVE
+        .decode_len(enc_len)
+        .map_err(|_| DecodingError::Length)?;
+
+    if dec_len != N {
+        return Err(DecodingError::Length);
+    }
+
+    let mut data = <[u8; N]>::default();
+
+    data_encoding::HEXLOWER_PERMISSIVE
+        .decode_mut(val.as_bytes(), &mut data)
+        .map_err(|_| DecodingError::Encoding)?;
+
+    Ok(data)
+}
+
+#[derive(Clone, Debug, From)]
+#[from(forward)]
+pub struct DecodedTopic(DecodedTopicInner);
+
+#[derive(Clone, Debug, From)]
+enum DecodedTopicInner {
+    Legacy(LegacyTopicId),
+    Pairing(PairingTopicId),
+}
+
+#[derive(Clone, Debug)]
+struct LegacyTopicId([u8; 32]);
+
+impl LegacyTopicId {
+    fn decode(s: &str) -> Result<Self, TopicDecodingErrorInner> {
+        hex_decode_array(s).map(Self).map_err(Into::into)
+    }
+}
+
+#[derive(Clone, Debug)]
+struct PairingTopicId([u8; 18]);
+
+impl PairingTopicId {
+    const REGION_BYTE_IDX: usize = 1;
+
+    fn decode(s: &str) -> Result<Self, TopicDecodingErrorInner> {
+        use TopicDecodingErrorInner as Error;
+
+        let bytes: [u8; 18] = hex_decode_array(s)?;
+
+        // Validate the `Region` byte
+        let region_byte = bytes[Self::REGION_BYTE_IDX];
+        let _ = Region::try_from_u8(region_byte).ok_or(Error::UnknownRegion(region_byte))?;
+
+        Ok(Self(bytes))
+    }
+
+    fn region(&self) -> Region {
+        // NOTE: `unwrap` is fine here, as we've validated the `Region` byte in the
+        // constructor
+        Region::try_from_u8(self.0[Self::REGION_BYTE_IDX]).unwrap()
+    }
+}
+
+#[repr(u8)]
+enum TopicKind {
+    Pairing = 0,
+}
+
+impl TryFrom<u8> for TopicKind {
+    type Error = TopicDecodingErrorInner;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => Self::Pairing,
+            kind => return Err(TopicDecodingErrorInner::UnknownKind(kind)),
+        })
+    }
+}
+
+/// Region of a Relay deployment.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u8)]
+pub enum Region {
+    Eu = 0,
+    Us = 1,
+    Ap = 2,
+    Sa = 3,
+}
+
+impl Region {
+    fn try_from_u8(val: u8) -> Option<Self> {
+        Some(match val {
+            0 => Self::Eu,
+            1 => Self::Us,
+            2 => Self::Ap,
+            3 => Self::Sa,
+            _ => return None,
+        })
+    }
+}
+
+impl FromStr for DecodedTopic {
+    type Err = TopicDecodingError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::decode(s).map_err(TopicDecodingError)
+    }
+}
+
+impl DecodedTopic {
+    pub fn generate() -> Self {
+        let bytes: [u8; 32] = rand::Rng::gen(&mut rand::thread_rng());
+
+        Self(LegacyTopicId(bytes).into())
+    }
+
+    fn decode(s: &str) -> Result<Self, TopicDecodingErrorInner> {
+        // Legacy topic ID
+        if s.len() == 64 {
+            return LegacyTopicId::decode(s).map(Into::into);
+        }
+
+        if s.len() < 2 {
+            return Err(DecodingError::Length.into());
+        }
+
+        let kind = u8::from_str_radix(&s[..2], 16).map_err(|_| DecodingError::Encoding)?;
+
+        match TopicKind::try_from(kind)? {
+            TopicKind::Pairing => PairingTopicId::decode(s).map(Into::into),
+        }
+    }
+
+    /// Returns the [`Region`] the [`Topic`] is being handled by.
+    pub fn region(&self) -> Option<Region> {
+        match &self.0 {
+            DecodedTopicInner::Legacy(_) => None,
+            DecodedTopicInner::Pairing(topic_id) => Some(topic_id.region()),
+        }
+    }
+
+    /// Returns the underlying bytes of this [`DecodedTopic`].
+    pub fn bytes(&self) -> &[u8] {
+        match &self.0 {
+            DecodedTopicInner::Legacy(topic_id) => &topic_id.0,
+            DecodedTopicInner::Pairing(topic_id) => &topic_id.0,
+        }
+    }
+
+    /// Converts this [`DecodedTopic`] to a [`Vec`] of the underlying bytes.
+    pub fn to_bytes(self) -> Vec<u8> {
+        self.bytes().to_vec()
+    }
+}
+
+impl std::fmt::Display for DecodedTopic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&hex_encode(self.bytes()))
+    }
+}
+
+impl From<DecodedTopic> for Topic {
+    fn from(val: DecodedTopic) -> Self {
+        Self(val.to_string().into())
+    }
+}
+
+impl TryFrom<Topic> for DecodedTopic {
+    type Error = TopicDecodingError;
+
+    fn try_from(value: Topic) -> Result<Self, Self::Error> {
+        value.as_ref().parse()
+    }
+}
+
 impl_byte_array_newtype!(DecodedSubscription, SubscriptionId, 32);
 impl_byte_array_newtype!(DecodedAuthSubject, AuthSubject, 32);
 impl_byte_array_newtype!(DecodedProjectId, ProjectId, 16);
@@ -353,9 +545,25 @@ mod test {
 
         assert_eq!(topic_str, Topic::from(topic_bin).as_ref());
 
-        assert!(matches!(
-            "85089843ce".parse::<DecodedTopic>(),
-            Err(DecodingError::Length)
-        ));
+        assert!("85089843ce".parse::<DecodedTopic>().is_err());
+    }
+
+    #[test]
+    fn pairing_topic() {
+        let topic = DecodedTopic::decode("000032c2d0a76742f2d6852b5f531a460abc").unwrap();
+        assert_eq!(topic.region(), Some(Region::Eu));
+
+        let topic = DecodedTopic::decode("000132c2d0a76742f2d6852b5f531a460abc").unwrap();
+        assert_eq!(topic.region(), Some(Region::Us));
+
+        let topic = DecodedTopic::decode("000232c2d0a76742f2d6852b5f531a460abc").unwrap();
+        assert_eq!(topic.region(), Some(Region::Ap));
+
+        let topic = DecodedTopic::decode("000332c2d0a76742f2d6852b5f531a460abc").unwrap();
+        assert_eq!(topic.region(), Some(Region::Sa));
+
+        assert!(DecodedTopic::decode("000432c2d0a76742f2d6852b5f531a460abc").is_err());
+        assert!(DecodedTopic::decode("010032c2d0a76742f2d6852b5f531a460abc").is_err());
+        assert!(DecodedTopic::decode("000032c2d0a76742f2d6852b5f531a460abcd").is_err());
     }
 }
