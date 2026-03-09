@@ -43,6 +43,7 @@ alloy = { version = "0.3", optional = true, features = [
 ] }
 strum = { version = "0.26", features = ["strum_macros", "derive"] }
 enum-as-inner = "0.6"
+arrayvec = { version = "0.7", features = ["serde"] }
 
 [dev-dependencies]
 tokio = { version = "1.47", features = ["test-util", "macros"] }

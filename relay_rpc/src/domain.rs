@@ -8,6 +8,7 @@ use {
         },
         new_type,
     },
+    arrayvec::ArrayVec,
     derive_more::{AsMut, AsRef, From},
     ed25519_dalek::VerifyingKey,
     rand::RngCore,
@@ -362,17 +363,17 @@ where
     Ok(data)
 }
 
-#[derive(Clone, Debug, From)]
+#[derive(Clone, Debug, From, Eq, PartialEq, Hash)]
 #[from(forward)]
 pub struct DecodedTopic(DecodedTopicInner);
 
-#[derive(Clone, Debug, From)]
+#[derive(Clone, Debug, From, Eq, PartialEq, Hash)]
 enum DecodedTopicInner {
     New(TopicId),
     Legacy(LegacyTopicId),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 struct LegacyTopicId([u8; 32]);
 
 impl LegacyTopicId {
@@ -381,7 +382,7 @@ impl LegacyTopicId {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 struct TopicId([u8; 18]);
 
 impl TopicId {
@@ -389,9 +390,11 @@ impl TopicId {
     const VERSION_BYTE_IDX: usize = 0;
 
     fn decode(s: &str) -> Result<Self, TopicDecodingErrorInner> {
-        use TopicDecodingErrorInner as Error;
+        Self::from_bytes(hex_decode_array(s)?)
+    }
 
-        let bytes: [u8; 18] = hex_decode_array(s)?;
+    fn from_bytes(bytes: [u8; 18]) -> Result<Self, TopicDecodingErrorInner> {
+        use TopicDecodingErrorInner as Error;
 
         // Validate the `TopicVersion` byte
         let version_byte = bytes[Self::VERSION_BYTE_IDX];
@@ -576,6 +579,12 @@ impl std::fmt::Display for DecodedTopic {
     }
 }
 
+impl AsRef<[u8]> for DecodedTopic {
+    fn as_ref(&self) -> &[u8] {
+        self.bytes()
+    }
+}
+
 impl From<DecodedTopic> for Topic {
     fn from(val: DecodedTopic) -> Self {
         Self(val.to_string().into())
@@ -587,6 +596,43 @@ impl TryFrom<Topic> for DecodedTopic {
 
     fn try_from(value: Topic) -> Result<Self, Self::Error> {
         value.as_ref().parse()
+    }
+}
+
+impl Serialize for DecodedTopic {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.bytes().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for DecodedTopic {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let bytes = ArrayVec::<u8, 32>::deserialize(deserializer)?;
+
+        let invalid_length_error = || serde::de::Error::custom("invalid length");
+
+        match bytes.len() {
+            18 => {
+                let mut buf: [u8; 18] = Default::default();
+                buf.copy_from_slice(&bytes);
+                TopicId::from_bytes(buf)
+                    .map(Into::into)
+                    .map_err(serde::de::Error::custom)
+            }
+            32 => bytes
+                .into_inner()
+                .map(LegacyTopicId)
+                .map(Into::into)
+                .map_err(|_| invalid_length_error()),
+
+            _ => Err(invalid_length_error()),
+        }
     }
 }
 
