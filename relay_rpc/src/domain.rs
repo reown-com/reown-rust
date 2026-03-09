@@ -10,6 +10,7 @@ use {
     },
     derive_more::{AsMut, AsRef, From},
     ed25519_dalek::VerifyingKey,
+    rand::RngCore,
     serde::{Deserialize, Serialize},
     serde_aux::prelude::deserialize_number_from_string,
     std::{str::FromStr, sync::Arc},
@@ -43,7 +44,7 @@ enum TopicDecodingErrorInner {
     InvalidHex(#[from] DecodingError),
 
     #[error("Unknown kind: {0}")]
-    UnknownKind(u8),
+    UnknownVersion(u8),
 
     #[error("Unknown region: {0}")]
     UnknownRegion(u8),
@@ -367,8 +368,8 @@ pub struct DecodedTopic(DecodedTopicInner);
 
 #[derive(Clone, Debug, From)]
 enum DecodedTopicInner {
+    New(TopicId),
     Legacy(LegacyTopicId),
-    Pairing(PairingTopicId),
 }
 
 #[derive(Clone, Debug)]
@@ -381,21 +382,44 @@ impl LegacyTopicId {
 }
 
 #[derive(Clone, Debug)]
-struct PairingTopicId([u8; 18]);
+struct TopicId([u8; 18]);
 
-impl PairingTopicId {
+impl TopicId {
     const REGION_BYTE_IDX: usize = 1;
+    const VERSION_BYTE_IDX: usize = 0;
 
     fn decode(s: &str) -> Result<Self, TopicDecodingErrorInner> {
         use TopicDecodingErrorInner as Error;
 
         let bytes: [u8; 18] = hex_decode_array(s)?;
 
+        // Validate the `TopicVersion` byte
+        let version_byte = bytes[Self::VERSION_BYTE_IDX];
+        let _ =
+            TopicVersion::try_from_u8(version_byte).ok_or(Error::UnknownVersion(version_byte))?;
+
         // Validate the `Region` byte
         let region_byte = bytes[Self::REGION_BYTE_IDX];
         let _ = Region::try_from_u8(region_byte).ok_or(Error::UnknownRegion(region_byte))?;
 
         Ok(Self(bytes))
+    }
+
+    fn new(version: TopicVersion, region: Region) -> Self {
+        let mut bytes: [u8; 18] = Default::default();
+
+        bytes[Self::VERSION_BYTE_IDX] = version as u8;
+        bytes[Self::REGION_BYTE_IDX] = region as u8;
+
+        rand::thread_rng().fill_bytes(&mut bytes[2..]);
+
+        Self(bytes)
+    }
+
+    fn version(&self) -> TopicVersion {
+        // NOTE: `unwrap` is fine here, as we've validated the `TopicVersion` byte in
+        // the constructor
+        TopicVersion::try_from_u8(self.0[Self::VERSION_BYTE_IDX]).unwrap()
     }
 
     fn region(&self) -> Region {
@@ -405,19 +429,41 @@ impl PairingTopicId {
     }
 }
 
-#[repr(u8)]
-enum TopicKind {
-    Pairing = 0,
+/// [`Topic`] kind.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TopicKind {
+    /// Legacy topic. Can be either a pairing or a session topic.
+    Legacy,
+
+    /// Regular pairing topic.
+    Pairing,
+
+    /// WCP-specific pairing topic.
+    WcpPairing,
 }
 
-impl TryFrom<u8> for TopicKind {
-    type Error = TopicDecodingErrorInner;
+#[repr(u8)]
+enum TopicVersion {
+    PairingV1 = 0,
+    WcpPairingV1 = 1,
+}
 
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Ok(match value {
-            0 => Self::Pairing,
-            kind => return Err(TopicDecodingErrorInner::UnknownKind(kind)),
+impl TopicVersion {
+    fn try_from_u8(val: u8) -> Option<Self> {
+        Some(match val {
+            0 => Self::PairingV1,
+            1 => Self::WcpPairingV1,
+            _ => return None,
         })
+    }
+}
+
+impl From<TopicVersion> for TopicKind {
+    fn from(kind: TopicVersion) -> Self {
+        match kind {
+            TopicVersion::PairingV1 => Self::Pairing,
+            TopicVersion::WcpPairingV1 => Self::WcpPairing,
+        }
     }
 }
 
@@ -452,10 +498,21 @@ impl FromStr for DecodedTopic {
 }
 
 impl DecodedTopic {
+    /// Generates a new [Legacy](`TopicKind::Legacy`) [`Topic`].
     pub fn generate() -> Self {
         let bytes: [u8; 32] = rand::Rng::gen(&mut rand::thread_rng());
 
         Self(LegacyTopicId(bytes).into())
+    }
+
+    /// Generates a new [Pairing](`TopicKind::Pairing`) [`Topic`].
+    pub fn pairing(region: Region) -> Self {
+        TopicId::new(TopicVersion::PairingV1, region).into()
+    }
+
+    /// Generates a new [WCP Pairing](`TopicKind::WcpPairing`) [`Topic`].
+    pub fn wcp_pairing(region: Region) -> Self {
+        TopicId::new(TopicVersion::WcpPairingV1, region).into()
     }
 
     fn decode(s: &str) -> Result<Self, TopicDecodingErrorInner> {
@@ -468,18 +525,34 @@ impl DecodedTopic {
             return Err(DecodingError::Length.into());
         }
 
-        let kind = u8::from_str_radix(&s[..2], 16).map_err(|_| DecodingError::Encoding)?;
+        TopicId::decode(s).map(Into::into)
+    }
 
-        match TopicKind::try_from(kind)? {
-            TopicKind::Pairing => PairingTopicId::decode(s).map(Into::into),
+    /// Returns [`TopicKind`] of this [`DecodedTopic`].
+    pub fn kind(&self) -> TopicKind {
+        match &self.0 {
+            DecodedTopicInner::New(topic_id) => topic_id.version().into(),
+            DecodedTopicInner::Legacy(_) => TopicKind::Legacy,
+        }
+    }
+
+    /// Indicates whether this topic is being used for WalletConnect Pay.
+    ///
+    /// Note: this can give false negatives for [`TopicKind::Legacy`].
+    pub fn is_wcp(&self) -> bool {
+        match self.kind() {
+            TopicKind::Legacy | TopicKind::Pairing => false,
+            TopicKind::WcpPairing => true,
         }
     }
 
     /// Returns the [`Region`] the [`Topic`] is being handled by.
+    ///
+    /// `None` for [`TopicKind::Legacy`].
     pub fn region(&self) -> Option<Region> {
         match &self.0 {
+            DecodedTopicInner::New(topic_id) => Some(topic_id.region()),
             DecodedTopicInner::Legacy(_) => None,
-            DecodedTopicInner::Pairing(topic_id) => Some(topic_id.region()),
         }
     }
 
@@ -487,11 +560,11 @@ impl DecodedTopic {
     pub fn bytes(&self) -> &[u8] {
         match &self.0 {
             DecodedTopicInner::Legacy(topic_id) => &topic_id.0,
-            DecodedTopicInner::Pairing(topic_id) => &topic_id.0,
+            DecodedTopicInner::New(topic_id) => &topic_id.0,
         }
     }
 
-    /// Converts this [`DecodedTopic`] to a [`Vec`] of the underlying bytes.
+    /// Converts this [`DecodedTopic`] into a [`Vec`] of the underlying bytes.
     pub fn to_bytes(self) -> Vec<u8> {
         self.bytes().to_vec()
     }
@@ -549,21 +622,42 @@ mod test {
     }
 
     #[test]
-    fn pairing_topic() {
+    fn new_topic_format_decoding() {
         let topic = DecodedTopic::decode("000032c2d0a76742f2d6852b5f531a460abc").unwrap();
         assert_eq!(topic.region(), Some(Region::Eu));
+        assert_eq!(topic.kind(), TopicKind::Pairing);
+        assert!(!topic.is_wcp());
 
-        let topic = DecodedTopic::decode("000132c2d0a76742f2d6852b5f531a460abc").unwrap();
+        let topic = DecodedTopic::decode("010132c2d0a76742f2d6852b5f531a460abc").unwrap();
         assert_eq!(topic.region(), Some(Region::Us));
+        assert_eq!(topic.kind(), TopicKind::WcpPairing);
+        assert!(topic.is_wcp());
 
         let topic = DecodedTopic::decode("000232c2d0a76742f2d6852b5f531a460abc").unwrap();
         assert_eq!(topic.region(), Some(Region::Ap));
+        assert_eq!(topic.kind(), TopicKind::Pairing);
+        assert!(!topic.is_wcp());
 
-        let topic = DecodedTopic::decode("000332c2d0a76742f2d6852b5f531a460abc").unwrap();
+        let topic = DecodedTopic::decode("010332c2d0a76742f2d6852b5f531a460abc").unwrap();
         assert_eq!(topic.region(), Some(Region::Sa));
+        assert_eq!(topic.kind(), TopicKind::WcpPairing);
+        assert!(topic.is_wcp());
 
         assert!(DecodedTopic::decode("000432c2d0a76742f2d6852b5f531a460abc").is_err());
-        assert!(DecodedTopic::decode("010032c2d0a76742f2d6852b5f531a460abc").is_err());
+        assert!(DecodedTopic::decode("020032c2d0a76742f2d6852b5f531a460abc").is_err());
         assert!(DecodedTopic::decode("000032c2d0a76742f2d6852b5f531a460abcd").is_err());
+    }
+
+    #[test]
+    fn new_topic_format_constructors() {
+        let topic = DecodedTopic::pairing(Region::Eu);
+        assert_eq!(topic.region(), Some(Region::Eu));
+        assert_eq!(topic.kind(), TopicKind::Pairing);
+        assert!(!topic.is_wcp());
+
+        let topic = DecodedTopic::wcp_pairing(Region::Us);
+        assert_eq!(topic.region(), Some(Region::Us));
+        assert_eq!(topic.kind(), TopicKind::WcpPairing);
+        assert!(topic.is_wcp());
     }
 }
