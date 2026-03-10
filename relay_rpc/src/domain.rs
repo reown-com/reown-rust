@@ -719,12 +719,14 @@ mod test {
 
     // These are the old definitions of `Topic` and `DecodedTopic`.
     // We need them to make sure that serialization is backwards compatible.
+    #[allow(dead_code)]
     new_type!(
         #[doc = "Represents the topic type."]
         #[as_ref(forward)]
         #[from(forward)]
         OldTopic: Arc<str>
     );
+    #[allow(dead_code)]
     impl_byte_array_newtype!(OldDecodedTopic, OldTopic, 32);
 
     #[test]
