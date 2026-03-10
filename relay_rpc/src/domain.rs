@@ -10,7 +10,7 @@ use {
     },
     derive_more::{AsMut, AsRef, From},
     ed25519_dalek::VerifyingKey,
-    rand::RngCore,
+    rand::RngCore as _,
     serde::{Deserialize, Serialize},
     serde_aux::prelude::deserialize_number_from_string,
     std::{str::FromStr, sync::Arc},
@@ -43,7 +43,7 @@ enum TopicDecodingErrorInner {
     #[error("Invalid hex: {0}")]
     InvalidHex(#[from] DecodingError),
 
-    #[error("Unknown kind: {0}")]
+    #[error("Unknown version: {0}")]
     UnknownVersion(u8),
 
     #[error("Unknown region: {0}")]
