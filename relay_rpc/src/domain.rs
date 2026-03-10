@@ -36,7 +36,7 @@ pub enum ClientIdDecodingError {
 
 #[derive(Debug, Clone, thiserror::Error)]
 #[error("Failed to decode Topic: {0}")]
-pub struct TopicDecodingError(TopicDecodingErrorInner);
+pub struct TopicDecodingError(#[source] TopicDecodingErrorInner);
 
 #[derive(Debug, Clone, thiserror::Error)]
 enum TopicDecodingErrorInner {
