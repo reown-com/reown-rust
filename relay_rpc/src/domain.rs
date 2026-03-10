@@ -720,21 +720,25 @@ mod test {
     // These are the old definitions of `Topic` and `DecodedTopic`.
     // We need them to make sure that serialization is backwards compatible.
     #[allow(dead_code)]
-    new_type!(
-        #[doc = "Represents the topic type."]
-        #[as_ref(forward)]
-        #[from(forward)]
-        OldTopic: Arc<str>
-    );
-    #[allow(dead_code)]
-    impl_byte_array_newtype!(OldDecodedTopic, OldTopic, 32);
+    mod old {
+        use super::*;
+
+        new_type!(
+            #[doc = "Represents the topic type."]
+            #[as_ref(forward)]
+            #[from(forward)]
+            Topic: Arc<str>
+        );
+
+        impl_byte_array_newtype!(DecodedTopic, Topic, 32);
+    }
 
     #[test]
     fn new_topic_format_serialization() {
         // Check that topics previously serialized using the old code can still be
         // deserialized. The only place where this matters is Relay mailbox
         // entry, which uses `postcard`.
-        let topic = OldDecodedTopic::generate();
+        let topic = old::DecodedTopic::generate();
         let serialized_topic_bytes = postcard::to_stdvec(&topic).unwrap();
         let deserialized_topic: DecodedTopic =
             postcard::from_bytes(&serialized_topic_bytes).unwrap();
