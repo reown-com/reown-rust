@@ -8,7 +8,6 @@ use {
         },
         new_type,
     },
-    arrayvec::ArrayVec,
     derive_more::{AsMut, AsRef, From},
     ed25519_dalek::VerifyingKey,
     rand::RngCore,
@@ -604,7 +603,19 @@ impl Serialize for DecodedTopic {
     where
         S: serde::Serializer,
     {
-        self.bytes().serialize(serializer)
+        let bytes = match &self.0 {
+            // We can't change the length of the serialized array, because that would break
+            // non-self-describing serialization formats (`postcard`).
+            // So we leave first 14 bytes as `0`.
+            DecodedTopicInner::New(topic_id) => {
+                let mut buf = [0u8; 32];
+                buf[14..].copy_from_slice(&topic_id.0);
+                buf
+            }
+            DecodedTopicInner::Legacy(topic_id) => topic_id.0,
+        };
+
+        bytes.serialize(serializer)
     }
 }
 
@@ -613,26 +624,25 @@ impl<'de> Deserialize<'de> for DecodedTopic {
     where
         D: serde::Deserializer<'de>,
     {
-        let bytes = ArrayVec::<u8, 32>::deserialize(deserializer)?;
+        let bytes = <[u8; 32]>::deserialize(deserializer)?;
 
-        let invalid_length_error = || serde::de::Error::custom("invalid length");
+        let first_non_zero_byte_idx = bytes
+            .iter()
+            .position(|byte| *byte != 0)
+            .unwrap_or(usize::MAX);
 
-        match bytes.len() {
-            18 => {
-                let mut buf: [u8; 18] = Default::default();
-                buf.copy_from_slice(&bytes);
-                TopicId::from_bytes(buf)
-                    .map(Into::into)
-                    .map_err(serde::de::Error::custom)
+        if first_non_zero_byte_idx >= 14 {
+            let mut buf = [0u8; 18];
+            buf.copy_from_slice(&bytes[14..]);
+
+            // If first 14 bytes are `0`, but the following 18 bytes are invalid `TopicId`,
+            // we consider it to be `LegacyTopicId`.
+            if let Ok(topic_id) = TopicId::from_bytes(buf) {
+                return Ok(topic_id.into());
             }
-            32 => bytes
-                .into_inner()
-                .map(LegacyTopicId)
-                .map(Into::into)
-                .map_err(|_| invalid_length_error()),
-
-            _ => Err(invalid_length_error()),
         }
+
+        Ok(LegacyTopicId(bytes).into())
     }
 }
 
@@ -705,5 +715,83 @@ mod test {
         assert_eq!(topic.region(), Some(Region::Us));
         assert_eq!(topic.kind(), TopicKind::WcpPairing);
         assert!(topic.is_wcp());
+    }
+
+    // These are the old definitions of `Topic` and `DecodedTopic`.
+    // We need them to make sure that serialization is backwards compatible.
+    new_type!(
+        #[doc = "Represents the topic type."]
+        #[as_ref(forward)]
+        #[from(forward)]
+        OldTopic: Arc<str>
+    );
+    impl_byte_array_newtype!(OldDecodedTopic, OldTopic, 32);
+
+    #[test]
+    fn new_topic_format_serialization() {
+        // Check that topics previously serialized using the old code can still be
+        // deserialized. The only place where this matters is Relay mailbox
+        // entry, which uses `postcard`.
+        let topic = OldDecodedTopic::generate();
+        let serialized_topic_bytes = postcard::to_stdvec(&topic).unwrap();
+        let deserialized_topic: DecodedTopic =
+            postcard::from_bytes(&serialized_topic_bytes).unwrap();
+        assert_eq!(topic.as_ref(), deserialized_topic.as_ref());
+        assert_eq!(deserialized_topic.kind(), TopicKind::Legacy);
+
+        let topic = DecodedTopic::pairing(Region::Eu);
+        let serialized_topic_bytes = postcard::to_stdvec(&topic).unwrap();
+        let deserialized_topic: DecodedTopic =
+            postcard::from_bytes(&serialized_topic_bytes).unwrap();
+        assert_eq!(topic.as_ref(), deserialized_topic.as_ref());
+        assert_eq!(deserialized_topic.kind(), TopicKind::Pairing);
+        assert_eq!(deserialized_topic.region(), Some(Region::Eu));
+
+        // No way to avoid this - 32 `0` bytes array turns out to match the new topic id
+        // format.
+        let bytes = [0u8; 32];
+        let deserialized_topic: DecodedTopic = postcard::from_bytes(&bytes).unwrap();
+        assert_eq!(deserialized_topic.kind(), TopicKind::Pairing);
+        assert_eq!(deserialized_topic.region(), Some(Region::Eu));
+
+        // First 14 `0` bytes - new topic format
+        let bytes = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1,
+        ];
+        let deserialized_topic: DecodedTopic = postcard::from_bytes(&bytes).unwrap();
+        assert_eq!(deserialized_topic.kind(), TopicKind::WcpPairing);
+        assert_eq!(deserialized_topic.region(), Some(Region::Us));
+
+        // Less than 14 `0` bytes - legacy topic format
+        let bytes = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1,
+        ];
+        let deserialized_topic: DecodedTopic = postcard::from_bytes(&bytes).unwrap();
+        assert_eq!(deserialized_topic.kind(), TopicKind::Legacy);
+        assert_eq!(deserialized_topic.bytes(), &bytes);
+
+        let bytes = [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1,
+        ];
+        let deserialized_topic: DecodedTopic = postcard::from_bytes(&bytes).unwrap();
+        assert_eq!(deserialized_topic.kind(), TopicKind::Legacy);
+
+        let bytes = [
+            0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1,
+        ];
+        let deserialized_topic: DecodedTopic = postcard::from_bytes(&bytes).unwrap();
+        assert_eq!(deserialized_topic.kind(), TopicKind::Legacy);
+
+        // First 14 `0` bytes, but the `TopicId` is invalid - legacy topic.
+        let bytes = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1,
+        ];
+        let deserialized_topic: DecodedTopic = postcard::from_bytes(&bytes).unwrap();
+        assert_eq!(deserialized_topic.kind(), TopicKind::Legacy);
     }
 }
