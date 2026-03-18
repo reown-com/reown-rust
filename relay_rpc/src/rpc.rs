@@ -310,7 +310,7 @@ impl ProposeSessionV2 {
             pairing_topic: topic,
             session_proposal: self.session_proposal,
             attestation: self.attestation,
-            analytics: self.analytics0t,
+            analytics: self.analytics,
         }
     }
 }
