@@ -273,14 +273,16 @@ pub enum ProposeSessionError {
 /// Propose session request parameters.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ProposeSession {
-    pub pairing_topic: Topic,
+pub struct ProposeSession<T = Topic> {
+    pub pairing_topic: T,
     pub session_proposal: Arc<str>,
     pub attestation: Option<Arc<str>>,
 
     #[serde(default, flatten, skip_serializing_if = "is_default")]
     pub analytics: Option<AnalyticsWrapper>,
 }
+
+pub type ProposeSessionV2 = ProposeSession<()>;
 
 impl ProposeSession {
     pub fn to_session_proposal(&self) -> Publish {
@@ -292,6 +294,17 @@ impl ProposeSession {
             tag: 1100,
             ttl_secs: 300,
             analytics: self.analytics.clone(),
+        }
+    }
+}
+
+impl ProposeSessionV2 {
+    pub fn with_pairing_topic(self, topic: Topic) -> ProposeSession {
+        ProposeSession {
+            pairing_topic: topic,
+            session_proposal: self.session_proposal,
+            attestation: self.attestation,
+            analytics: self.analytics0t,
         }
     }
 }
@@ -314,6 +327,23 @@ impl ServiceRequest for ProposeSession {
 
     fn into_params(self) -> Params {
         Params::ProposeSession(self)
+    }
+}
+
+impl ServiceRequest for ProposeSessionV2 {
+    type Error = ProposeSessionError;
+    type Response = Topic;
+
+    fn validate(&self) -> Result<(), PayloadError> {
+        if self.session_proposal.is_empty() {
+            Err(PayloadError::InvalidParams)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn into_params(self) -> Params {
+        Params::ProposeSessionV2(self)
     }
 }
 
@@ -1037,6 +1067,10 @@ pub enum Params {
     #[serde(rename = "wc_proposeSession")]
     ProposeSession(ProposeSession),
 
+    /// Parameters to propose session V2.
+    #[serde(rename = "wc_proposeSessionV2")]
+    ProposeSessionV2(ProposeSessionV2),
+
     /// Parameters to approve session.
     #[serde(rename = "wc_approveSession")]
     ApproveSession(ApproveSession),
@@ -1142,6 +1176,7 @@ impl Request {
         match &self.params {
             Params::CreateTopic(params) => params.validate(),
             Params::ProposeSession(params) => params.validate(),
+            Params::ProposeSessionV2(params) => params.validate(),
             Params::ApproveSession(params) => params.validate(),
             Params::Subscribe(params) => params.validate(),
             Params::SubscribeBlocking(params) => params.validate(),
