@@ -284,6 +284,12 @@ pub struct ProposeSession<T = Topic> {
 
 pub type ProposeSessionV2 = ProposeSession<()>;
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProposeSessionV2Response {
+    pub pairing_topic: Topic,
+}
+
 impl ProposeSession {
     pub fn to_session_proposal(&self) -> Publish {
         Publish {
@@ -332,7 +338,7 @@ impl ServiceRequest for ProposeSession {
 
 impl ServiceRequest for ProposeSessionV2 {
     type Error = ProposeSessionError;
-    type Response = Topic;
+    type Response = ProposeSessionV2Response;
 
     fn validate(&self) -> Result<(), PayloadError> {
         if self.session_proposal.is_empty() {
