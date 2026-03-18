@@ -273,8 +273,8 @@ pub enum ProposeSessionError {
 /// Propose session request parameters.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ProposeSession<T = Topic> {
-    pub pairing_topic: T,
+pub struct ProposeSession {
+    pub pairing_topic: Topic,
     pub session_proposal: Arc<str>,
     pub attestation: Option<Arc<str>>,
 
@@ -282,7 +282,16 @@ pub struct ProposeSession<T = Topic> {
     pub analytics: Option<AnalyticsWrapper>,
 }
 
-pub type ProposeSessionV2 = ProposeSession<()>;
+/// [`ProposeSession`] without `pairing_topic`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProposeSessionV2 {
+    pub session_proposal: Arc<str>,
+    pub attestation: Option<Arc<str>>,
+
+    #[serde(default, flatten, skip_serializing_if = "is_default")]
+    pub analytics: Option<AnalyticsWrapper>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
