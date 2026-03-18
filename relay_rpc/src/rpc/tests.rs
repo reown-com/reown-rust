@@ -83,6 +83,34 @@ fn propose_session() {
 }
 
 #[test]
+fn propose_session_v2() {
+    let payload: Payload = Payload::Request(Request::new(
+        1.into(),
+        Params::ProposeSessionV2(ProposeSessionV2 {
+            session_proposal: "proposal".into(),
+            attestation: Some("attestation".into()),
+            analytics: Some(AnalyticsWrapper::new(AnalyticsData {
+                correlation_id: Some(42),
+                ..Default::default()
+            })),
+        }),
+    ));
+
+    let serialized = serde_json::to_string(&payload).unwrap();
+
+    assert_eq!(
+        &serialized,
+        r#"{"id":1,"jsonrpc":"2.0","method":"wc_proposeSessionV2","params":{"sessionProposal":"proposal","attestation":"attestation","correlationId":42}}"#
+    );
+
+    assert!(!serialized.contains("pairingTopic"));
+
+    let deserialized: Payload = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(&payload, &deserialized)
+}
+
+#[test]
 fn approve_session() {
     // Filled properties.
     let payload: Payload = Payload::Request(Request::new(
