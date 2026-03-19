@@ -17,6 +17,7 @@ use {
             CreateTopic,
             FetchMessages,
             ProposeSession,
+            ProposeSessionV2,
             Publish,
             Receipt,
             SessionProperties,
@@ -174,6 +175,23 @@ impl Client {
     ) -> ResponseFuture<ProposeSession> {
         let (request, response) = create_request(ProposeSession {
             pairing_topic,
+            session_proposal: session_proposal.into(),
+            attestation: attestation.into(),
+            analytics: analytics.map(Into::into),
+        });
+
+        self.request(request);
+
+        response
+    }
+
+    pub fn propose_session_v2(
+        &self,
+        session_proposal: impl Into<Arc<str>>,
+        attestation: impl Into<Option<Arc<str>>>,
+        analytics: Option<AnalyticsData>,
+    ) -> ResponseFuture<ProposeSessionV2> {
+        let (request, response) = create_request(ProposeSessionV2 {
             session_proposal: session_proposal.into(),
             attestation: attestation.into(),
             analytics: analytics.map(Into::into),
