@@ -47,10 +47,6 @@ enum-as-inner = "0.6"
 [dev-dependencies]
 tokio = { version = "1.47", features = ["test-util", "macros"] }
 alloy = { version = "0.3", features = ["node-bindings"] }
-postcard = { version = "1.0", default-features = false, features = [
-    "alloc",
-    "use-std",
-] }
 
 [build-dependencies]
 serde_json = "1.0"
