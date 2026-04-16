@@ -653,16 +653,6 @@ impl ServiceRequest for BatchFetchMessages {
     }
 }
 
-/// Represents a message receipt.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Receipt {
-    /// The topic of the message to acknowledge.
-    pub topic: Topic,
-
-    /// The ID of the message to acknowledge.
-    pub message_id: MessageId,
-}
-
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalyticsData {

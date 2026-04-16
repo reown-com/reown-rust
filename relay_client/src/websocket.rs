@@ -16,7 +16,6 @@ use {
             FetchMessages,
             ProposeSession,
             Publish,
-            Receipt,
             SessionProperties,
             Subscribe,
             SubscribeBlocking,

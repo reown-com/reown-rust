@@ -7,7 +7,7 @@ use {
     http::{HeaderMap, StatusCode},
     relay_rpc::{
         domain::{SubscriptionId, Topic},
-        rpc::{self, Receipt, ServiceRequest},
+        rpc::{self, ServiceRequest},
     },
     std::{sync::Arc, time::Duration},
     url::Url,
