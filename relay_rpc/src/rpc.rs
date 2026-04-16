@@ -1,6 +1,7 @@
 //! The crate exports common types used when interacting with messages between
 //! clients. This also includes communication over HTTP between relays.
 
+pub use error::*;
 use {
     crate::{
         domain::{MessageId, SubscriptionId, Topic},
@@ -11,7 +12,6 @@ use {
     serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::{fmt::Debug, sync::Arc},
 };
-pub use error::*;
 
 pub mod error;
 pub mod msg_id;
