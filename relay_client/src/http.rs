@@ -212,17 +212,6 @@ impl Client {
         .await
     }
 
-    /// Acknowledge receipt of messages from a subscribed client.
-    pub async fn batch_receive(
-        &self,
-        receipts: impl Into<Vec<Receipt>>,
-    ) -> Response<rpc::BatchReceiveMessages> {
-        self.request(rpc::BatchReceiveMessages {
-            receipts: receipts.into(),
-        })
-        .await
-    }
-
     pub(crate) async fn request<T>(&self, payload: T) -> Response<T>
     where
         T: ServiceRequest,

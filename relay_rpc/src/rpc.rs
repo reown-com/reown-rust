@@ -34,11 +34,6 @@ pub const MAX_SUBSCRIPTION_BATCH_SIZE: usize = 500;
 /// See <https://github.com/WalletConnect/walletconnect-docs/blob/main/docs/specs/servers/relay/relay-server-rpc.md>
 pub const MAX_FETCH_BATCH_SIZE: usize = 500;
 
-/// The maximum number of receipts allowed for a batch receive request.
-///
-/// See <https://github.com/WalletConnect/walletconnect-docs/blob/main/docs/specs/servers/relay/relay-server-rpc.md>
-pub const MAX_RECEIVE_BATCH_SIZE: usize = 500;
-
 pub trait Serializable:
     Debug + Clone + PartialEq + Eq + Serialize + DeserializeOwned + Send + Sync + 'static
 {
@@ -668,43 +663,6 @@ pub struct Receipt {
     pub message_id: MessageId,
 }
 
-/// Data structure representing publish request params.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct BatchReceiveMessages {
-    /// The receipts to acknowledge.
-    pub receipts: Vec<Receipt>,
-}
-
-impl ServiceRequest for BatchReceiveMessages {
-    type Error = GenericError;
-    type Response = bool;
-
-    fn validate(&self) -> Result<(), PayloadError> {
-        let batch_size = self.receipts.len();
-
-        if batch_size == 0 {
-            return Err(PayloadError::BatchEmpty);
-        }
-
-        if batch_size > MAX_RECEIVE_BATCH_SIZE {
-            return Err(PayloadError::BatchLimitExceeded);
-        }
-
-        for receipt in &self.receipts {
-            receipt
-                .topic
-                .decode()
-                .map_err(|_| PayloadError::InvalidTopic)?;
-        }
-
-        Ok(())
-    }
-
-    fn into_params(self) -> Params {
-        Params::BatchReceiveMessages(self)
-    }
-}
-
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalyticsData {
@@ -981,10 +939,6 @@ pub enum Params {
     #[serde(rename = "irn_publish", alias = "iridium_publish")]
     Publish(Publish),
 
-    /// Parameters to batch receive.
-    #[serde(rename = "irn_batchReceive", alias = "iridium_batchReceive")]
-    BatchReceiveMessages(BatchReceiveMessages),
-
     /// Parameters for a subscription. The messages for any given topic sent to
     /// clients are wrapped into this format. A `publish` message to a topic
     /// results in a `subscription` message to each client subscribed to the
@@ -1041,7 +995,6 @@ impl Request {
             Params::BatchUnsubscribe(params) => params.validate(),
             Params::BatchFetchMessages(params) => params.validate(),
             Params::Publish(params) => params.validate(),
-            Params::BatchReceiveMessages(params) => params.validate(),
             Params::Subscription(params) => params.validate(),
         }
     }
