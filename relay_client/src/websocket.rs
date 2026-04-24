@@ -87,6 +87,7 @@ pub struct PublishedMessage {
     pub subscription_id: SubscriptionId,
     pub topic: Topic,
     pub message: Arc<str>,
+    pub attestation: Option<Arc<str>>,
     pub tag: u32,
     pub published_at: chrono::DateTime<chrono::Utc>,
     pub received_at: chrono::DateTime<chrono::Utc>,
@@ -102,6 +103,7 @@ impl PublishedMessage {
             subscription_id: id.clone(),
             topic: data.topic.clone(),
             message: data.message.clone(),
+            attestation: data.attestation.clone(),
             tag: data.tag,
             // TODO: Set proper value once implemented.
             published_at: now,
