@@ -7,7 +7,7 @@ use {
     http::{HeaderMap, StatusCode},
     relay_rpc::{
         auth::ed25519_dalek::SigningKey,
-        domain::{DecodedClientId, SubscriptionId, Topic},
+        domain::{DecodedClientId, Topic},
         jwt::{self, JwtError, VerifyableClaims},
         rpc::{self, Receipt, ServiceRequest},
     },
@@ -177,14 +177,6 @@ impl Client {
         self.request(rpc::Subscribe { topic }).await
     }
 
-    /// Subscribes on topic to receive messages. The request is resolved only
-    /// when fully processed by the relay.
-    /// Note: This function is experimental and will likely be removed in the
-    /// future.
-    pub async fn subscribe_blocking(&self, topic: Topic) -> Response<rpc::SubscribeBlocking> {
-        self.request(rpc::SubscribeBlocking { topic }).await
-    }
-
     /// Unsubscribes from a topic.
     pub async fn unsubscribe(&self, topic: Topic) -> Response<rpc::Unsubscribe> {
         self.request(rpc::Unsubscribe { topic }).await
@@ -286,27 +278,6 @@ impl Client {
             topics: topics.into(),
         })
         .await
-    }
-
-    /// Subscribes on multiple topics to receive messages. The request is
-    /// resolved only when fully processed by the relay.
-    /// Note: This function is experimental and will likely be removed in the
-    /// future.
-    pub async fn batch_subscribe_blocking(
-        &self,
-        topics: impl Into<Vec<Topic>>,
-    ) -> Result<
-        Vec<Result<SubscriptionId, Error<rpc::SubscriptionError>>>,
-        Error<rpc::SubscriptionError>,
-    > {
-        Ok(self
-            .request(rpc::BatchSubscribeBlocking {
-                topics: topics.into(),
-            })
-            .await?
-            .into_iter()
-            .map(crate::convert_subscription_result)
-            .collect())
     }
 
     /// Unsubscribes from multiple topics.

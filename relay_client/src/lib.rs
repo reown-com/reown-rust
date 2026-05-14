@@ -3,8 +3,7 @@ use {
     ::http::HeaderMap,
     relay_rpc::{
         auth::{SerializedAuthToken, RELAY_WEBSOCKET_ADDRESS},
-        domain::{MessageId, ProjectId, SubscriptionId},
-        rpc::{SubscriptionError, SubscriptionResult},
+        domain::{MessageId, ProjectId},
         user_agent::UserAgent,
     },
     serde::Serialize,
@@ -192,16 +191,6 @@ impl Default for MessageIdGenerator {
         Self {
             next: Arc::new(AtomicU8::new(0)),
         }
-    }
-}
-
-#[inline]
-fn convert_subscription_result(
-    res: SubscriptionResult,
-) -> Result<SubscriptionId, error::Error<SubscriptionError>> {
-    match res {
-        SubscriptionResult::Id(id) => Ok(id),
-        SubscriptionResult::Error(err) => Err(ClientError::from(err).into()),
     }
 }
 
