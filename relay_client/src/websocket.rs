@@ -1,9 +1,6 @@
 use {
     self::connection::{connection_event_loop, ConnectionControl},
-    crate::{
-        error::{ClientError, Error},
-        ConnectionOptions,
-    },
+    crate::{error::ClientError, ConnectionOptions},
     relay_rpc::{
         domain::{MessageId, SubscriptionId, Topic},
         rpc::{
@@ -11,20 +8,17 @@ use {
             ApproveSession,
             BatchFetchMessages,
             BatchSubscribe,
-            BatchSubscribeBlocking,
             BatchUnsubscribe,
             FetchMessages,
             ProposeSession,
             Publish,
             SessionProperties,
             Subscribe,
-            SubscribeBlocking,
             Subscription,
-            SubscriptionError,
             Unsubscribe,
         },
     },
-    std::{future::Future, sync::Arc, time::Duration},
+    std::{sync::Arc, time::Duration},
     tokio::sync::{
         mpsc::{self, UnboundedSender},
         oneshot,
@@ -132,8 +126,6 @@ pub trait ConnectionHandler: Send + 'static {
     fn outbound_error(&mut self, _error: ClientError) {}
 }
 
-type SubscriptionResult<T> = Result<T, Error<SubscriptionError>>;
-
 /// The Relay WebSocket RPC client.
 ///
 /// This provides the high-level access to all of the available RPC methods. For
@@ -233,18 +225,6 @@ impl Client {
         response
     }
 
-    /// Subscribes on topic to receive messages. The request is resolved only
-    /// when fully processed by the relay.
-    /// Note: This function is experimental and will likely be removed in the
-    /// future.
-    pub fn subscribe_blocking(&self, topic: Topic) -> ResponseFuture<SubscribeBlocking> {
-        let (request, response) = create_request(SubscribeBlocking { topic });
-
-        self.request(request);
-
-        response
-    }
-
     /// Unsubscribes from a topic.
     pub fn unsubscribe(&self, topic: Topic) -> EmptyResponseFuture<Unsubscribe> {
         let (request, response) = create_request(Unsubscribe { topic });
@@ -278,29 +258,6 @@ impl Client {
         self.request(request);
 
         response
-    }
-
-    /// Subscribes on multiple topics to receive messages. The request is
-    /// resolved only when fully processed by the relay.
-    /// Note: This function is experimental and will likely be removed in the
-    /// future.
-    pub fn batch_subscribe_blocking(
-        &self,
-        topics: impl Into<Vec<Topic>>,
-    ) -> impl Future<Output = SubscriptionResult<Vec<SubscriptionResult<SubscriptionId>>>> {
-        let (request, response) = create_request(BatchSubscribeBlocking {
-            topics: topics.into(),
-        });
-
-        self.request(request);
-
-        async move {
-            Ok(response
-                .await?
-                .into_iter()
-                .map(crate::convert_subscription_result)
-                .collect())
-        }
     }
 
     /// Unsubscribes from multiple topics.

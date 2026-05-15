@@ -421,31 +421,6 @@ impl ServiceRequest for Subscribe {
     }
 }
 
-/// Subscription request parameters. This request awaits the subscription to be
-/// fully processed and returns possible errors.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct SubscribeBlocking {
-    /// The topic to subscribe to.
-    pub topic: Topic,
-}
-
-impl ServiceRequest for SubscribeBlocking {
-    type Error = SubscriptionError;
-    type Response = SubscriptionId;
-
-    fn validate(&self) -> Result<(), PayloadError> {
-        self.topic
-            .decode()
-            .map_err(|_| PayloadError::InvalidTopic)?;
-
-        Ok(())
-    }
-
-    fn into_params(self) -> Params {
-        Params::SubscribeBlocking(self)
-    }
-}
-
 /// Data structure representing unsubscribe request params.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Unsubscribe {
@@ -554,34 +529,6 @@ impl ServiceRequest for BatchSubscribe {
 
     fn into_params(self) -> Params {
         Params::BatchSubscribe(self)
-    }
-}
-
-/// Multi-topic subscription request parameters. This request awaits all
-/// subscriptions to be fully processed and returns possible errors per topic.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct BatchSubscribeBlocking {
-    /// The topics to subscribe to.
-    pub topics: Vec<Topic>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum SubscriptionResult {
-    Id(SubscriptionId),
-    Error(ErrorData),
-}
-
-impl ServiceRequest for BatchSubscribeBlocking {
-    type Error = SubscriptionError;
-    type Response = Vec<SubscriptionResult>;
-
-    fn validate(&self) -> Result<(), PayloadError> {
-        BatchSubscribe::validate_topics(&self.topics)
-    }
-
-    fn into_params(self) -> Params {
-        Params::BatchSubscribeBlocking(self)
     }
 }
 
@@ -891,10 +838,6 @@ pub enum Params {
     #[serde(rename = "irn_subscribe", alias = "iridium_subscribe")]
     Subscribe(Subscribe),
 
-    /// Parameters to blocking subscribe.
-    #[serde(rename = "irn_subscribeBlocking", alias = "iridium_subscribeBlocking")]
-    SubscribeBlocking(SubscribeBlocking),
-
     /// Parameters to unsubscribe.
     #[serde(rename = "irn_unsubscribe", alias = "iridium_unsubscribe")]
     Unsubscribe(Unsubscribe),
@@ -906,13 +849,6 @@ pub enum Params {
     /// Parameters to batch subscribe.
     #[serde(rename = "irn_batchSubscribe", alias = "iridium_batchSubscribe")]
     BatchSubscribe(BatchSubscribe),
-
-    /// Parameters to blocking batch subscribe.
-    #[serde(
-        rename = "irn_batchSubscribeBlocking",
-        alias = "iridium_batchSubscribeBlocking"
-    )]
-    BatchSubscribeBlocking(BatchSubscribeBlocking),
 
     /// Parameters to batch unsubscribe.
     #[serde(rename = "irn_batchUnsubscribe", alias = "iridium_batchUnsubscribe")]
@@ -977,11 +913,9 @@ impl Request {
             Params::ProposeSession(params) => params.validate(),
             Params::ApproveSession(params) => params.validate(),
             Params::Subscribe(params) => params.validate(),
-            Params::SubscribeBlocking(params) => params.validate(),
             Params::Unsubscribe(params) => params.validate(),
             Params::FetchMessages(params) => params.validate(),
             Params::BatchSubscribe(params) => params.validate(),
-            Params::BatchSubscribeBlocking(params) => params.validate(),
             Params::BatchUnsubscribe(params) => params.validate(),
             Params::BatchFetchMessages(params) => params.validate(),
             Params::Publish(params) => params.validate(),
