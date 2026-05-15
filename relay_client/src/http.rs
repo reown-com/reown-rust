@@ -6,10 +6,8 @@ use {
     },
     http::{HeaderMap, StatusCode},
     relay_rpc::{
-        auth::ed25519_dalek::SigningKey,
-        domain::{DecodedClientId, SubscriptionId, Topic},
-        jwt::{self, JwtError, VerifyableClaims},
-        rpc::{self, Receipt, ServiceRequest},
+        domain::{SubscriptionId, Topic},
+        rpc::{self, ServiceRequest},
     },
     std::{sync::Arc, time::Duration},
     url::Url,
@@ -38,35 +36,6 @@ pub enum HttpClientError {
 
     #[error("Invalid HTTP status: {0}, body: {1:?}")]
     InvalidHttpCode(StatusCode, reqwest::Result<String>),
-
-    #[error("JWT error: {0}")]
-    Jwt(#[from] JwtError),
-}
-
-#[derive(Debug, Clone)]
-pub struct WatchRegisterRequest {
-    /// Service URL.
-    pub service_url: String,
-    /// Webhook URL.
-    pub webhook_url: String,
-    /// Watcher type. Either subscriber or publisher.
-    pub watch_type: rpc::WatchType,
-    /// Array of message tags to watch.
-    pub tags: Vec<u32>,
-    /// Array of statuses to watch.
-    pub statuses: Vec<rpc::WatchStatus>,
-    /// TTL for the registration.
-    pub ttl: Duration,
-}
-
-#[derive(Debug, Clone)]
-pub struct WatchUnregisterRequest {
-    /// Service URL.
-    pub service_url: String,
-    /// Webhook URL.
-    pub webhook_url: String,
-    /// Watcher type. Either subscriber or publisher.
-    pub watch_type: rpc::WatchType,
 }
 
 /// The Relay HTTP RPC client.
@@ -74,7 +43,6 @@ pub struct WatchUnregisterRequest {
 pub struct Client {
     client: reqwest::Client,
     url: Url,
-    origin: String,
     id_generator: MessageIdGenerator,
 }
 
@@ -89,19 +57,13 @@ impl Client {
             .map_err(HttpClientError::Transport)?;
 
         let url = opts.as_url()?;
-        let origin = url.origin().unicode_serialization();
         let id_generator = MessageIdGenerator::new();
 
         Ok(Self {
             client,
             url,
-            origin,
             id_generator,
         })
-    }
-
-    pub async fn create_topic(&self, topic: Topic) -> Response<rpc::CreateTopic> {
-        self.request(rpc::CreateTopic { topic }).await
     }
 
     pub async fn propose_session(
@@ -195,87 +157,6 @@ impl Client {
         self.request(rpc::FetchMessages { topic }).await
     }
 
-    /// Registers a webhook to watch messages.
-    pub async fn watch_register(
-        &self,
-        request: WatchRegisterRequest,
-        keypair: &SigningKey,
-    ) -> Response<rpc::WatchRegister> {
-        let iat = chrono::Utc::now().timestamp();
-        let ttl_sec: i64 = request
-            .ttl
-            .as_secs()
-            .try_into()
-            .map_err(|err| HttpClientError::InvalidRequest(Box::new(err)).into())
-            .map_err(Error::Client)?;
-        let exp = iat + ttl_sec;
-
-        let claims = rpc::WatchRegisterClaims {
-            basic: jwt::JwtBasicClaims {
-                iss: DecodedClientId::from_key(&keypair.verifying_key()).into(),
-                aud: self.origin.clone(),
-                iat,
-                sub: request.service_url,
-                exp: Some(exp),
-            },
-            act: rpc::WatchAction::Register,
-            typ: request.watch_type,
-            whu: request.webhook_url,
-            tag: request.tags,
-            sts: request.statuses,
-        };
-
-        let payload = rpc::WatchRegister {
-            register_auth: claims
-                .encode(keypair)
-                .map_err(HttpClientError::Jwt)
-                .map_err(ClientError::from)
-                .map_err(Error::Client)?,
-        };
-
-        self.request(payload).await
-    }
-
-    /// Registers a webhook to watch messages on behalf of another client.
-    pub async fn watch_register_behalf(
-        &self,
-        register_auth: String,
-    ) -> Response<rpc::WatchRegister> {
-        self.request(rpc::WatchRegister { register_auth }).await
-    }
-
-    /// Unregisters a webhook to watch messages.
-    pub async fn watch_unregister(
-        &self,
-        request: WatchUnregisterRequest,
-        keypair: &SigningKey,
-    ) -> Response<rpc::WatchUnregister> {
-        let iat = chrono::Utc::now().timestamp();
-
-        let claims = rpc::WatchUnregisterClaims {
-            basic: jwt::JwtBasicClaims {
-                iss: DecodedClientId::from_key(&keypair.verifying_key()).into(),
-                aud: self.origin.clone(),
-                iat,
-                sub: request.service_url,
-                exp: None,
-            },
-            act: rpc::WatchAction::Unregister,
-            typ: request.watch_type,
-            whu: request.webhook_url,
-        };
-
-        let payload = rpc::WatchUnregister {
-            unregister_auth: claims
-                .encode(keypair)
-                .map_err(HttpClientError::Jwt)
-                .map_err(ClientError::from)
-                .map_err(Error::Client)?,
-        };
-
-        self.request(payload).await
-    }
-
     /// Subscribes on multiple topics to receive messages. The request is
     /// resolved optimistically as soon as the relay receives it.
     pub async fn batch_subscribe(
@@ -327,17 +208,6 @@ impl Client {
     ) -> Response<rpc::BatchFetchMessages> {
         self.request(rpc::BatchFetchMessages {
             topics: topics.into(),
-        })
-        .await
-    }
-
-    /// Acknowledge receipt of messages from a subscribed client.
-    pub async fn batch_receive(
-        &self,
-        receipts: impl Into<Vec<Receipt>>,
-    ) -> Response<rpc::BatchReceiveMessages> {
-        self.request(rpc::BatchReceiveMessages {
-            receipts: receipts.into(),
         })
         .await
     }

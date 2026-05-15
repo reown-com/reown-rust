@@ -10,15 +10,12 @@ use {
             AnalyticsData,
             ApproveSession,
             BatchFetchMessages,
-            BatchReceiveMessages,
             BatchSubscribe,
             BatchSubscribeBlocking,
             BatchUnsubscribe,
-            CreateTopic,
             FetchMessages,
             ProposeSession,
             Publish,
-            Receipt,
             SessionProperties,
             Subscribe,
             SubscribeBlocking,
@@ -90,6 +87,7 @@ pub struct PublishedMessage {
     pub subscription_id: SubscriptionId,
     pub topic: Topic,
     pub message: Arc<str>,
+    pub attestation: Option<Arc<str>>,
     pub tag: u32,
     pub published_at: chrono::DateTime<chrono::Utc>,
     pub received_at: chrono::DateTime<chrono::Utc>,
@@ -105,6 +103,7 @@ impl PublishedMessage {
             subscription_id: id.clone(),
             topic: data.topic.clone(),
             message: data.message.clone(),
+            attestation: data.attestation.clone(),
             tag: data.tag,
             // TODO: Set proper value once implemented.
             published_at: now,
@@ -155,14 +154,6 @@ impl Client {
         tokio::spawn(connection_event_loop(control_rx, handler));
 
         Self { control_tx }
-    }
-
-    pub fn create_topic(&self, topic: Topic) -> ResponseFuture<CreateTopic> {
-        let (request, response) = create_request(CreateTopic { topic });
-
-        self.request(request);
-
-        response
     }
 
     pub fn propose_session(
@@ -330,20 +321,6 @@ impl Client {
     pub fn batch_fetch(&self, topics: impl Into<Vec<Topic>>) -> ResponseFuture<BatchFetchMessages> {
         let (request, response) = create_request(BatchFetchMessages {
             topics: topics.into(),
-        });
-
-        self.request(request);
-
-        response
-    }
-
-    /// Acknowledge receipt of messages from a subscribed client.
-    pub async fn batch_receive(
-        &self,
-        receipts: impl Into<Vec<Receipt>>,
-    ) -> ResponseFuture<BatchReceiveMessages> {
-        let (request, response) = create_request(BatchReceiveMessages {
-            receipts: receipts.into(),
         });
 
         self.request(request);
