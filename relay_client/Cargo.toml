@@ -5,8 +5,8 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-default = ["tokio-tungstenite/native-tls"]
-rustls = ["tokio-tungstenite/rustls-tls-native-roots"]
+default = ["tokio-tungstenite/native-tls", "reqwest/default-tls"]
+rustls = ["tokio-tungstenite/rustls-tls-native-roots", "reqwest/rustls-tls"]
 
 [dependencies]
 relay_rpc = { path = "../relay_rpc" }
@@ -21,7 +21,7 @@ url = "2.3"
 http = "1.0"
 
 # HTTP client dependencies.
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", default-features = false, features = ["charset", "http2", "json", "system-proxy"] }
 
 # WebSocket client dependencies.
 tokio = { version = "1.47", features = ["rt", "time", "sync", "macros", "rt-multi-thread"] }
