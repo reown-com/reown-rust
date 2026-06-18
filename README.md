@@ -1,29 +1,16 @@
-# WalletConnect Rust SDK
+# Reown Rust
 
-This is the foundation for the WalletConnect Rust SDK. Currently, there's only the core client and the RPC types required to communicate with the Relay.
+This repo contains various internal utilities, including a Rust client for the relay.
 
-Examples:
-- [HTTP client](examples/http_client.rs)
-- [WebSocket client](examples/websocket_client.rs)
-- [Webhook dispatch](examples/webhook.rs)
+## WalletConnect Rust SDK
 
-## `relay_client`
+Reown is currently not planning to build a WalletConnect SDK for Rust, and we are not accepting contributions for this. However, you are welcome to build your own client or contribute to an existing community one.
 
-The core Relay client. Provides access to all available Relay RPC methods to build on top of.
+These community resources may be useful for you, but they have not been tested by, and are not endorsed by Reown:
 
-## `relay_rpc`
+- [walletconnect-client](https://lib.rs/crates/walletconnect-client) crate
+- [PR](https://github.com/reown-com/reown-rust/pull/48) adding Sign Client to this repo
 
-Provides all of the Relay domain types (e.g. `ClientId`, `ProjectId` etc.) as well as auth token generation and validation functionality.
-
-### `cacao` feature
-
-To aid IDE integration you may want to add this to your local `relay_rpc/Cargo.toml` file:
-
-```toml
-[features]
-default = ["cacao"]
-```
-
-# License
+## License
 
 [Apache License (Version 2.0)](LICENSE)
