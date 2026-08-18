@@ -51,6 +51,15 @@ pub enum CacaoError {
     #[error("Unable to verify")]
     Verification,
 
+    #[error("CACAO expired")]
+    Expired,
+
+    #[error("CACAO not yet valid")]
+    NotYetValid,
+
+    #[error("Invalid CACAO timestamp")]
+    TimestampInvalid,
+
     #[error("Internal EIP-1271 resolution error: {0}")]
     Eip1271Internal(
         alloy::rpc::json_rpc::RpcError<alloy::transports::TransportErrorKind, Box<RawValue>>,
