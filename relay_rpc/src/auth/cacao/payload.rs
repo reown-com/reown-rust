@@ -1,6 +1,7 @@
 use {
     super::{CacaoError, Version},
     crate::auth::did::{extract_did_data, DID_METHOD_KEY},
+    chrono::{DateTime, Utc},
     serde::{Deserialize, Serialize},
     url::Url,
 };
@@ -27,8 +28,23 @@ impl Payload {
     const ISS_POSITION_OF_REFERENCE: usize = 3;
     pub const WALLETCONNECT_IDENTITY_KEY: &'static str = "walletconnect_identity_key";
 
-    /// TODO: write valdation
     pub fn validate(&self) -> Result<(), CacaoError> {
+        self.validate_at(Utc::now())
+    }
+
+    pub fn validate_at(&self, now: DateTime<Utc>) -> Result<(), CacaoError> {
+        if let Some(exp) = &self.exp {
+            let exp_time = parse_cacao_timestamp(exp)?;
+            if now >= exp_time {
+                return Err(CacaoError::Expired);
+            }
+        }
+        if let Some(nbf) = &self.nbf {
+            let nbf_time = parse_cacao_timestamp(nbf)?;
+            if now < nbf_time {
+                return Err(CacaoError::NotYetValid);
+            }
+        }
         Ok(())
     }
 
@@ -115,6 +131,12 @@ impl Payload {
                     .and_then(|(_, value)| Self::extract_did_key(&value))
             })
     }
+}
+
+fn parse_cacao_timestamp(value: &str) -> Result<DateTime<Utc>, CacaoError> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|dt| dt.with_timezone(&Utc))
+        .map_err(|_| CacaoError::TimestampInvalid)
 }
 
 #[cfg(all(test, feature = "cacao-tests"))]
@@ -215,5 +237,89 @@ mod tests {
             .unwrap(),
             "z6MkvjNoiz9AXGH1igzrtB54US5hE9bZPQm1ryKGkCLwWht7"
         );
+    }
+}
+
+#[cfg(test)]
+mod validity_window_tests {
+    use {super::*, chrono::TimeZone};
+
+    fn payload(exp: Option<&str>, nbf: Option<&str>) -> Payload {
+        Payload {
+            domain: "example.com".to_owned(),
+            iss: "did:pkh:eip155:1:0xdFe7d0E324ed017a74aE311E9236E6CaDB24176b".to_owned(),
+            statement: None,
+            aud: "https://example.com".to_owned(),
+            version: Version::V1,
+            nonce: "nonce".to_owned(),
+            iat: "2023-09-07T11:04:23+02:00".to_owned(),
+            exp: exp.map(str::to_owned),
+            nbf: nbf.map(str::to_owned),
+            request_id: None,
+            resources: None,
+        }
+    }
+
+    fn now() -> DateTime<Utc> {
+        Utc.timestamp_opt(1_700_000_000, 0).unwrap()
+    }
+
+    #[test]
+    fn absent_exp_and_nbf_are_valid() {
+        assert!(payload(None, None).validate_at(now()).is_ok());
+    }
+
+    #[test]
+    fn future_exp_is_valid() {
+        assert!(payload(Some("2024-01-01T00:00:00Z"), None)
+            .validate_at(now())
+            .is_ok());
+    }
+
+    #[test]
+    fn past_exp_is_expired() {
+        assert!(matches!(
+            payload(Some("2023-01-01T00:00:00Z"), None).validate_at(now()),
+            Err(CacaoError::Expired)
+        ));
+    }
+
+    #[test]
+    fn exp_equal_to_now_is_expired() {
+        assert!(matches!(
+            payload(Some("2023-11-14T22:13:20Z"), None).validate_at(now()),
+            Err(CacaoError::Expired)
+        ));
+    }
+
+    #[test]
+    fn past_nbf_is_valid() {
+        assert!(payload(None, Some("2023-01-01T00:00:00Z"))
+            .validate_at(now())
+            .is_ok());
+    }
+
+    #[test]
+    fn future_nbf_is_not_yet_valid() {
+        assert!(matches!(
+            payload(None, Some("2024-01-01T00:00:00Z")).validate_at(now()),
+            Err(CacaoError::NotYetValid)
+        ));
+    }
+
+    #[test]
+    fn unparseable_exp_fails_closed() {
+        assert!(matches!(
+            payload(Some("not-a-timestamp"), None).validate_at(now()),
+            Err(CacaoError::TimestampInvalid)
+        ));
+    }
+
+    #[test]
+    fn unparseable_nbf_fails_closed() {
+        assert!(matches!(
+            payload(None, Some("not-a-timestamp")).validate_at(now()),
+            Err(CacaoError::TimestampInvalid)
+        ));
     }
 }
