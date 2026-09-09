@@ -1,7 +1,7 @@
 use {
     crate::domain::DidKey,
     chrono::Utc,
-    ed25519_dalek::{Signer, SigningKey},
+    ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey},
     serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::collections::HashSet,
 };
@@ -184,21 +184,18 @@ pub trait VerifyableClaims: Serialize + DeserializeOwned {
             return Err(JwtError::Format);
         };
 
-        let key = jsonwebtoken::DecodingKey::from_ed_der(claims.basic().iss.as_ref());
+        let key =
+            VerifyingKey::from_bytes(&claims.basic().iss.0 .0).map_err(|_| JwtError::Signature)?;
 
-        // Finally, verify signature.
-        let sig_result = jsonwebtoken::crypto::verify(
-            signature,
-            message.as_bytes(),
-            &key,
-            jsonwebtoken::Algorithm::EdDSA,
-        );
+        let signature = data_encoding::BASE64URL_NOPAD
+            .decode(signature.as_bytes())
+            .ok()
+            .and_then(|bytes| Signature::from_slice(&bytes).ok())
+            .ok_or(JwtError::Signature)?;
 
-        match sig_result {
-            Ok(true) => Ok(claims),
-
-            _ => Err(JwtError::Signature),
-        }
+        key.verify(message.as_bytes(), &signature)
+            .map(|_| claims)
+            .map_err(|_| JwtError::Signature)
     }
 
     /// Performs basic verification of the claims. This includes the following
